@@ -10,10 +10,12 @@ const publicRoutes: RouteConfig[] = [
   {
     path: "/login",
     element: <Login />,
+    guestOnly: true,
   },
   {
     path: "/signup",
     element: <Signup />,
+    guestOnly: true,
   },
   {
     path: "/oauth2/callback",

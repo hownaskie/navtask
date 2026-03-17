@@ -13,31 +13,6 @@ export interface User {
   updatedDate: string
 }
 
-export interface Attachment {
-  id: number
-  attachmentUrl: string
-}
-
-export interface Subtask {
-  id: number
-  name: string
-  status: SubtaskStatus
-}
-
-export interface Task {
-  id: number
-  title: string
-  details: string | null
-  priority: Priority
-  status: TaskStatus
-  userId: number
-  createdDate: string
-  dueDate: string | null
-  updatedDate: string
-  attachments: Attachment[]
-  subtasks: Subtask[]
-}
-
 export interface ApiResponse<T> {
   success: boolean
   message: string
@@ -48,37 +23,6 @@ export interface AuthResponse {
   token: string
   tokenType: string
   user: User
-}
-
-export interface CreateTaskRequest {
-  title: string
-  details?: string
-  priority: Priority
-  status: TaskStatus
-  dueDate?: string
-  userId: number
-  subtasks: CreateSubtaskRequest[]
-}
-
-export interface CreateSubtaskRequest {
-  name: string
-  status: SubtaskStatus
-}
-
-export interface UpdateSubtaskRequest {
-  id?: number
-  name: string
-  status: SubtaskStatus
-}
-
-export interface UpdateTaskRequest {
-  title: string
-  details?: string
-  priority: Priority
-  status: TaskStatus
-  dueDate?: string
-  subtasks: UpdateSubtaskRequest[]
-  deleteSubtaskIds: number[]
 }
 
 export interface RegisterRequest {

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { clearToken, getToken } from '../utils/tokenStorage';
 import type { ApiResponse, AuthResponse, LoginRequest, RegisterRequest, User } from '../types/auth';
+import type { TaskResponse, CreateTaskRequest, UpdateTaskRequest } from '../types/task';
 
 // ── Axios instance ───────────────────────────────────────────────────────────
 // Pre-configured axios instance with baseURL and JSON content type.
@@ -8,7 +9,6 @@ import type { ApiResponse, AuthResponse, LoginRequest, RegisterRequest, User } f
 // handles 401s by clearing the session and reloading to /login.
 const api = axios.create({
   baseURL: "/api/v1",
-  headers: { "Content-Type": "application/json" },
 });
  
 // Request interceptor — attach JWT on every outgoing request
@@ -51,4 +51,54 @@ export const authApi = {
 
 export const userApi = {
   getAll: () => api.get<ApiResponse<User[]>>('/users'),
+}
+
+export const taskApi = {
+  // Create a new task with optional file attachments
+  create: (data: CreateTaskRequest, images?: FileList) => {
+    const formData = new FormData();
+    formData.append('task', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    
+    if (images) {
+      for (const file of images) {
+        formData.append('images', file);
+      }
+    }
+    
+    return api.post<ApiResponse<TaskResponse>>('/tasks', formData);
+  },
+
+  // Get a single task by ID
+  getById: (id: number) =>
+    api.get<ApiResponse<TaskResponse>>(`/tasks/${id}`),
+
+  // Get all tasks for current user
+  getAll: () =>
+    api.get<ApiResponse<TaskResponse[]>>('/tasks'),
+
+  // Get all tasks for a specific user
+  getByUserId: (userId: number) =>
+    api.get<ApiResponse<TaskResponse[]>>(`/tasks/user/${userId}`),
+
+  // Update an existing task
+  update: (id: number, data: UpdateTaskRequest, images?: FileList) => {
+    const formData = new FormData();
+    formData.append('task', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    
+    if (images) {
+      for (const file of images) {
+        formData.append('images', file);
+      }
+    }
+    
+    return api.put<ApiResponse<TaskResponse>>(`/tasks/${id}`, formData);
+  },
+
+  // Delete a task
+  delete: (id: number) =>
+    api.delete<ApiResponse<void>>(`/tasks/${id}`),
+
+  // Delete an attachment
+  deleteAttachment: (taskId: number, attachmentId: number) =>
+    api.delete<ApiResponse<void>>(`/tasks/${taskId}/attachments/${attachmentId}`),
 }

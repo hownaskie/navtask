@@ -9,14 +9,12 @@ import {
   Button,
   LinearProgress,
 } from "@mui/material";
-import SocialButton from "../../components/SocialButton";
-import OrDivider from "../../components/OrDivider";
 import BrandPanel from "../../components/BrandPanel";
+import AuthFooter from "../../components/AuthFooter";
 import { useState } from "react";
-import { FacebookIcon, GoogleIcon } from "../../assets";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuthContext";
 import { validateSignup } from "../../utils";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -135,37 +133,13 @@ const Signup = () => {
 
             {loading && <LinearProgress sx={{ mt: 1.5, borderRadius: 8 }} />}
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              mt={3}
-            >
-              Already have an account?{" "}
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate("/login")}
-                sx={{ fontWeight: 700, p: 0, minWidth: "auto" }}
-              >
-                Sign in
-              </Button>
-            </Typography>
-
-            <OrDivider text="OR" />
-
-            <Stack direction="column" spacing={1.5} mb={0.5}>
-              <SocialButton
-                icon={<GoogleIcon />}
-                label="Continue with Google"
-                onClick={() => handleSocial("Google User", "google@user.com")}
-              />
-              <SocialButton
-                icon={<FacebookIcon />}
-                label="Continue with Facebook"
-                onClick={() => handleSocial("Facebook User", "fb@user.com")}
-              />
-            </Stack>
+            <AuthFooter
+              title="Already have an account?"
+              linkLabel="Sign in"
+              linkPath="/login"
+              onGoogle={() => handleSocial("Google User", "google@user.com")}
+              onFacebook={() => handleSocial("Facebook User", "fb@user.com")}
+            />
           </Box>
         </Box>
       </Box>

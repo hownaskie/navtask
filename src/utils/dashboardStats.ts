@@ -1,13 +1,4 @@
-import type { Priority, Status } from "../types/dashboard";
-
-interface Task {
-  id: number;
-  done: boolean;
-  title: string;
-  dueDate: string;
-  priority: Priority;
-  status: Status;
-}
+import type { TaskResponse } from "../types/task";
 
 export interface DashboardStats {
   total: number;
@@ -19,12 +10,12 @@ export interface DashboardStats {
 /**
  * Calculate dashboard statistics from tasks
  */
-export const calculateDashboardStats = (tasks: Task[]): DashboardStats => {
+export const calculateDashboardStats = (tasks: TaskResponse[]): DashboardStats => {
   const total = tasks.length;
-  const done = tasks.filter((t) => t.done).length;
+  const done = tasks.filter((t) => t.status === "COMPLETED").length;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
   const highCount = tasks.filter(
-    (t) => t.priority === "High" && !t.done,
+    (t) => t.priority === "High" && t.status !== "COMPLETED",
   ).length;
 
   return {

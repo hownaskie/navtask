@@ -1,5 +1,5 @@
-import type { Task } from "../data/mockTasks";
 import type { Priority, Status, SortKey, SortDir } from "../types/dashboard";
+import type { TaskResponse } from "../types/task";
 import { compareValues } from "./sort";
 
 export interface FilterCriteria {
@@ -14,7 +14,7 @@ export interface FilterCriteria {
  * @param filters - Filter criteria (title, priority, status)
  * @returns Filtered array of tasks
  */
-export const filterTasks = (tasks: Task[], filters: FilterCriteria): Task[] => {
+export const filterTasks = (tasks: TaskResponse[], filters: FilterCriteria): TaskResponse[] => {
   return tasks.filter((t) => {
     const titleMatch = filters.title.trim()
       ? t.title.toLowerCase().includes(filters.title.trim().toLowerCase())
@@ -37,10 +37,10 @@ export const filterTasks = (tasks: Task[], filters: FilterCriteria): Task[] => {
  * @returns Sorted array of tasks
  */
 export const sortTasks = (
-  tasks: Task[],
+  tasks: TaskResponse[],
   sortKey: SortKey,
   sortDir: SortDir,
-): Task[] => {
+): TaskResponse[] => {
   return [...tasks].sort((a, b) => {
     const cmp = compareValues(a, b, sortKey);
     return sortDir === "asc" ? cmp : -cmp;
@@ -56,11 +56,11 @@ export const sortTasks = (
  * @returns Filtered and sorted array of tasks
  */
 export const filterAndSortTasks = (
-  tasks: Task[],
+  tasks: TaskResponse[],
   filters: FilterCriteria,
   sortKey: SortKey,
   sortDir: SortDir,
-): Task[] => {
+): TaskResponse[] => {
   const filtered = filterTasks(tasks, filters);
   return sortTasks(filtered, sortKey, sortDir);
 };

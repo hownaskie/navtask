@@ -12,14 +12,12 @@ import {
 import { TaskAlt } from "@mui/icons-material";
 import { useState } from "react";
 import { Visibility } from "@mui/icons-material";
-import SocialButton from "../../components/SocialButton";
-import OrDivider from "../../components/OrDivider";
 import BrandPanel from "../../components/BrandPanel";
-import { FacebookIcon, GoogleIcon } from "../../assets";
-import { useNavigate } from "react-router-dom";
+import AuthFooter from "../../components/AuthFooter";
 // import { useAuth } from "../../context/useAuthContext";
 import { validateLogin } from "../../utils";
 import { authApi } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -162,37 +160,13 @@ const Login = () => {
 
             {loading && <LinearProgress sx={{ mt: 1.5, borderRadius: 8 }} />}
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              mt={3}
-            >
-              Don't have an account yet?{" "}
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate("/signup")}
-                sx={{ fontWeight: 700, p: 0, minWidth: "auto" }}
-              >
-                Sign up
-              </Button>
-            </Typography>
-
-            <OrDivider text="OR" />
-
-            <Stack direction="column" spacing={1.5} mb={0.5}>
-              <SocialButton
-                icon={<GoogleIcon />}
-                label="Continue with Google"
-                onClick={handleGoogle}
-              />
-              <SocialButton
-                icon={<FacebookIcon />}
-                label="Continue with Facebook"
-                onClick={handleFacebook}
-              />
-            </Stack>
+            <AuthFooter
+              title="Don't have an account yet?"
+              linkLabel="Sign up"
+              linkPath="/signup"
+              onGoogle={handleGoogle}
+              onFacebook={handleFacebook}
+            />
           </Box>
         </Box>
       </Box>
