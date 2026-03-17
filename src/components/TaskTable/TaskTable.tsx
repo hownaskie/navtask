@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import type { SortDir, SortKey, Priority, Status } from "../../types/dashboard";
-import type { TaskResponse } from "../../types/task";
+import type { TaskResponse } from '../../interfaces/task'
 import { formatDate } from "../../utils";
 import TaskTableSkeleton from "../TaskTableSkeleton";
 

@@ -8,12 +8,12 @@ import {
 } from 'react'
 import { authApi } from '../services/api'
 import { clearToken } from '../utils/tokenStorage'
-import type { User } from '../types/auth'
+import type { User } from '../interfaces/auth'
 
 interface AuthContextValue {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<User>
+  login: (username: string, password: string) => Promise<User>
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<User>
   logout: () => void
   loginWithToken: (token: string) => void
@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { loadUser() }, [loadUser])
 
-  const login = async (email: string, password: string): Promise<User> => {
-    const res = await authApi.login({ email, password })
+  const login = async (username: string, password: string): Promise<User> => {
+    const res = await authApi.login({ username, password })
     const { token, user } = res.data.data
     localStorage.setItem('navtask_token', token)
     setUser(user)
@@ -49,12 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (
-    firstName: string,
-    lastName: string,
-    email: string,
+    username: string,
     password: string
   ): Promise<User> => {
-    const res = await authApi.register({ firstName, lastName, email, password })
+    const res = await authApi.register({ username, password })
     const { token, user } = res.data.data
     localStorage.setItem('navtask_token', token)
     setUser(user)

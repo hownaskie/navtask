@@ -14,14 +14,14 @@ import { useState } from "react";
 import { Visibility } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
-// import { useAuth } from "../../context/useAuthContext";
+import { useAuth } from "../../context/useAuthContext";
 import { validateLogin } from "../../utils";
 import { authApi } from "../../services/api";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const navigate = useNavigate();
-  // const { login } = useAuth();
+  const { login } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +38,7 @@ const Login = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      // login({ name: username, email: "" });
+      login(username, password);
       navigate("/dashboard");
     }, 900);
   };
@@ -101,7 +101,11 @@ const Login = () => {
                   setUsername(e.target.value);
                   setError("");
                 }}
-                InputLabelProps={{ shrink: true }}
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
               <TextField
@@ -113,33 +117,37 @@ const Login = () => {
                   setPassword(e.target.value);
                   setError("");
                 }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment
-                      position="end"
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Button
-                        size="small"
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                  input: {
+                    endAdornment: (
+                      <InputAdornment
+                        position="end"
                         sx={{
-                          fontSize: "0.72rem",
-                          color: "primary.main",
-                          p: 0.1,
-                          minWidth: "auto",
-                          border: "none",
-                          "&:focus": { outline: "none" },
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
-                        endIcon={<Visibility />}
-                      />
-                    </InputAdornment>
-                  ),
+                      >
+                        <Button
+                          size="small"
+                          sx={{
+                            fontSize: "0.72rem",
+                            color: "primary.main",
+                            p: 0.1,
+                            minWidth: "auto",
+                            border: "none",
+                            "&:focus": { outline: "none" },
+                          }}
+                          endIcon={<Visibility />}
+                        />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
               {error && (
                 <Alert severity="error" sx={{ borderRadius: 2, py: 0.5 }}>

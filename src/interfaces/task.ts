@@ -1,5 +1,4 @@
-import type { SubtaskStatus, TaskStatus } from "./auth";
-import type { Priority } from "./dashboard";
+import type { SubtaskStatus, TaskPriority, TaskStatus } from "../types/auth";
 
 // ── Task API Types ────────────────────────────────────────────────────────────
 export interface Attachment {
@@ -17,7 +16,7 @@ export interface TaskResponse {
   id: number;
   title: string;
   details: string | null;
-  priority: Priority;
+  priority: TaskPriority;
   status: TaskStatus;
   userId: number;
   createdDate: string; // ISO date
@@ -28,32 +27,32 @@ export interface TaskResponse {
 }
 
 export interface CreateTaskRequest {
-  title: string
-  details?: string
-  priority: Priority
-  status: TaskStatus
-  dueDate?: string
-  userId: number
-  subtasks: CreateSubtaskRequest[]
+  title: string;
+  details?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate?: string;
+  userId: number;
+  subtasks: CreateSubtaskRequest[];
 }
 
 export interface CreateSubtaskRequest {
-  name: string
-  status: SubtaskStatus
+  name: string;
+  status: SubtaskStatus;
 }
 
 export interface UpdateSubtaskRequest {
-  id?: number
-  name: string
-  status: SubtaskStatus
+  id?: number;
+  name: string;
+  status: SubtaskStatus;
 }
 
 export interface UpdateTaskRequest {
-  title: string
-  details?: string
-  priority: Priority
-  status: TaskStatus
-  dueDate?: string
-  subtasks: UpdateSubtaskRequest[]
-  deleteSubtaskIds: number[]
+  title: string;
+  details?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate?: string;
+  subtasks: UpdateSubtaskRequest[];
+  deleteSubtaskIds: number[];
 }

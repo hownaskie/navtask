@@ -13,33 +13,54 @@ import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
 import { useState } from "react";
 import { useAuth } from "../../context/useAuthContext";
-import { validateSignup } from "../../utils";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../../hooks/useUser";
+import {
+  canSubmitSignup,
+  getSignupFieldErrors,
+  getSignupRuleState,
+} from "../../utils";
+import { authApi } from "../../services/api";
 
 const Signup = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { users } = useUser();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [usernameTouched, setUsernameTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
-  const handleSocial = (username: string, email: string) => {
-    login({ username, email });
-    navigate("/dashboard");
-  };
+  const signupRules = getSignupRuleState(username, password, users);
+  const { usernameError, passwordError } = getSignupFieldErrors(
+    username,
+    { usernameTouched, passwordTouched },
+    signupRules,
+  );
 
-  const handleSubmit = () => {
+  const handleGoogle = () => authApi.googleLogin();
+  const handleFacebook = () => authApi.facebookLogin();
+
+  const handleSubmit = async () => {
+    setUsernameTouched(true);
+    setPasswordTouched(true);
     setError("");
-    const error = validateSignup(username, password);
-    if (error) return setError(error);
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      login({ username });
+    if (!canSubmitSignup(username, signupRules)) {
+      return setError("Please satisfy all password requirements");
+    }
+
+    try {
+      setLoading(true);
+      await login(username, password);
       navigate("/dashboard");
-    }, 900);
+    } catch {
+      setError("Unable to create account with these credentials");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,24 +117,106 @@ const Signup = () => {
                 label="Username"
                 placeholder="Jane Doe"
                 fullWidth
-                value={name}
+                value={username}
+                error={Boolean(usernameError)}
+                helperText={usernameError}
                 onChange={(e) => {
                   setUsername(e.target.value);
                   setError("");
                 }}
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+                onBlur={() => setUsernameTouched(true)}
               />
               <TextField
                 label="Password"
                 type="password"
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 characters"
                 fullWidth
                 value={password}
+                error={Boolean(passwordError)}
+                helperText={passwordError}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setError("");
                 }}
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+                onBlur={() => setPasswordTouched(true)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
+
+              <Stack spacing={0.5} mt={-0.75}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography
+                    component="span"
+                    sx={{
+                      color: signupRules.excludesNameOrEmail
+                        ? "success.main"
+                        : "text.disabled",
+                      fontSize: "0.9rem",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {signupRules.excludesNameOrEmail ? "✓" : "•"}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    Cannot contain your name or email address
+                  </Typography>
+                </Stack>
+
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography
+                    component="span"
+                    sx={{
+                      color: signupRules.hasMinLength
+                        ? "success.main"
+                        : "text.disabled",
+                      fontSize: "0.9rem",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {signupRules.hasMinLength ? "✓" : "•"}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    Atleast 8 characters
+                  </Typography>
+                </Stack>
+
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography
+                    component="span"
+                    sx={{
+                      color: signupRules.hasNumberOrSymbol
+                        ? "success.main"
+                        : "text.disabled",
+                      fontSize: "0.9rem",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {signupRules.hasNumberOrSymbol ? "✓" : "•"}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    Contains a number or symbol
+                  </Typography>
+                </Stack>
+              </Stack>
+
               {error && (
                 <Alert severity="error" sx={{ borderRadius: 2, py: 0.5 }}>
                   {error}
@@ -137,8 +240,8 @@ const Signup = () => {
               title="Already have an account?"
               linkLabel="Sign in"
               linkPath="/login"
-              onGoogle={() => handleSocial("Google User", "google@user.com")}
-              onFacebook={() => handleSocial("Facebook User", "fb@user.com")}
+              onGoogle={handleGoogle}
+              onFacebook={handleFacebook}
             />
           </Box>
         </Box>

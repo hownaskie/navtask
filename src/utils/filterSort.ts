@@ -1,5 +1,5 @@
 import type { Priority, Status, SortKey, SortDir } from "../types/dashboard";
-import type { TaskResponse } from "../types/task";
+import type { TaskResponse } from '../interfaces/task'
 import { compareValues } from "./sort";
 
 export interface FilterCriteria {

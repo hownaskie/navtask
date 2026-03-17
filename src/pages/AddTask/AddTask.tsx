@@ -10,6 +10,7 @@ import {
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
   FormControl,
@@ -22,8 +23,11 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { Priority, Status } from "../../types/dashboard";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
+import { useTask } from "../../hooks/useTask";
+import type { Priority, Status } from "../../types/dashboard";
+import type { TaskStatus, TaskPriority } from "../../types/auth";
+import { useAuth } from "../../context/useAuthContext";
 
 interface Subtask {
   id: number;
@@ -56,10 +60,12 @@ const SectionLabel = ({ children }: { children: string }) => (
 // ── Page ──────────────────────────────────────────────────────────────────────
 const AddTask = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { createTask, createTaskLoading } = useTask();
 
   // ── Form state
-  const [priority, setPriority] = useState<Priority | "">("");
-  const [status, setStatus] = useState<Status | "">("");
+  const [priority, setPriority] = useState<string | null>("");
+  const [status, setStatus] = useState<string | null>("");
   const [title, setTitle] = useState("");
   const [dateCreated, setDateCreated] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -99,11 +105,22 @@ const AddTask = () => {
 
   // ── Submit
   const handleSave = () => {
-    // TODO: wire to your task store / API
-    navigate("/app");
+    if (user?.id) {
+      createTask({
+        title: title.trim(),
+        details: details.trim() || undefined,
+        priority: priority?.toUpperCase() as TaskPriority,
+        status: status?.toUpperCase() as TaskStatus,
+        dueDate: dueDate || undefined,
+        subtasks: subtasks
+          .filter((s) => s.title.trim())
+          .map((s) => ({ name: s.title.trim(), status: "NOT_STARTED" })),
+        userId: user?.id,
+      }).finally(() => navigate("/dashboard"));
+    }
   };
 
-  const handleCancel = () => navigate("/app");
+  const handleCancel = () => navigate("/dashboard");
 
   // ── Shared input sx
   const inputSx = {
@@ -148,20 +165,26 @@ const AddTask = () => {
                 }}
                 sx={{ width: 300 }}
               >
-                {(["Low", "High", "Critical"] as Priority[]).map((p) => (
-                  <MenuItem key={p} value={p}>
+                {(
+                  [
+                    { label: "Low", value: "LOW" },
+                    { label: "High", value: "HIGH" },
+                    { label: "Critical", value: "CRITICAL" },
+                  ] as { label: string; value: string }[]
+                ).map((p) => (
+                  <MenuItem key={p.value} value={p.value}>
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          bgcolor: PRIORITY_COLORS[p].color,
+                          bgcolor: PRIORITY_COLORS[p.label as Priority].color,
                           flexShrink: 0,
                         }}
                       />
                       <Typography fontSize="0.875rem" fontWeight={500}>
-                        {p}
+                        {p.label}
                       </Typography>
                     </Stack>
                   </MenuItem>
@@ -184,25 +207,25 @@ const AddTask = () => {
               >
                 {(
                   [
-                    "Not Started",
-                    "In Progress",
-                    "Complete",
-                    "Cancelled",
-                  ] as Status[]
+                    { label: "Not Started", value: "NOT_STARTED" },
+                    { label: "In Progress", value: "IN_PROGRESS" },
+                    { label: "Complete", value: "COMPLETED" },
+                    { label: "Cancelled", value: "CANCELLED" },
+                  ] as { label: string; value: string }[]
                 ).map((s) => (
-                  <MenuItem key={s} value={s}>
+                  <MenuItem key={s.label} value={s.value}>
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          bgcolor: STATUS_COLORS[s].color,
+                          bgcolor: STATUS_COLORS[s.label as Status].color,
                           flexShrink: 0,
                         }}
                       />
                       <Typography fontSize="0.875rem" fontWeight={500}>
-                        {s}
+                        {s.label}
                       </Typography>
                     </Stack>
                   </MenuItem>
@@ -572,7 +595,12 @@ const AddTask = () => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={!title.trim()}
+          disabled={!title.trim() || createTaskLoading}
+          startIcon={
+            createTaskLoading ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : undefined
+          }
           sx={{
             borderRadius: "25px",
             textTransform: "none",
@@ -586,7 +614,7 @@ const AddTask = () => {
             "&.Mui-disabled": { opacity: 0.5 },
           }}
         >
-          Save Task
+          {createTaskLoading ? "Saving..." : "Save Task"}
         </Button>
       </Box>
     </Container>

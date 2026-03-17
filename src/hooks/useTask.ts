@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { taskApi } from "../services/api";
-import type { CreateTaskRequest, TaskResponse } from "../types/task";
+import type { CreateTaskRequest, TaskResponse } from '../interfaces/task'
 
 export const useTask = () => {
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [createLoading, setCreateLoading] = useState<boolean>(false);
+  const [createTaskLoading, setCreateTaskLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -23,14 +23,14 @@ export const useTask = () => {
 
   const createTask = async (taskData: CreateTaskRequest) => {
     try {
-      setCreateLoading(true);
+      setCreateTaskLoading(true);
       await taskApi.create(taskData);
     } catch (err) {
       console.error("Error creating task:", err);
     } finally {
-      setCreateLoading(false);
+      setCreateTaskLoading(false);
     }
   };
 
-  return { tasks, loading, createTask, createLoading };
+  return { tasks, loading, createTask, createTaskLoading };
 };

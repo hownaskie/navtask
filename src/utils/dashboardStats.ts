@@ -1,4 +1,4 @@
-import type { TaskResponse } from "../types/task";
+import type { TaskResponse } from '../interfaces/task'
 
 export interface DashboardStats {
   total: number;
@@ -15,7 +15,7 @@ export const calculateDashboardStats = (tasks: TaskResponse[]): DashboardStats =
   const done = tasks.filter((t) => t.status === "COMPLETED").length;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
   const highCount = tasks.filter(
-    (t) => t.priority === "High" && t.status !== "COMPLETED",
+    (t) => t.priority === 'HIGH' && t.status !== 'COMPLETED',
   ).length;
 
   return {
