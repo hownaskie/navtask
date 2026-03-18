@@ -13,7 +13,7 @@ import { Sidebar, MobileMenuButton, SIDEBAR_WIDTH } from "../Sidebar";
 
 // Map pathnames → readable page titles shown in the topbar
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
+  "/dashboard": "To-do",
   "/add": "New Task",
   "/edit": "Edit Task",
   "/view": "View Task",
@@ -150,7 +150,7 @@ const ProtectedLayout = () => {
               color="text.secondary"
               sx={{ display: { xs: "none", sm: "block" } }}
             >
-              {user?.username}
+              {user?.firstName + " " + user?.lastName}
             </Typography>
           </Stack>
         </Paper>

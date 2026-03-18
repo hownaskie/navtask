@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Add,
   AttachFile,
@@ -21,13 +21,31 @@ import {
   TextField,
   Tooltip,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import type { Priority, Status } from "../../types/dashboard";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
+import { useTask } from "../../hooks/useTask";
+import {
+  priorityLabelMap,
+  priorityValueMap,
+  statusLabelMap,
+  statusValueMap,
+} from "../../constants/task";
+import type { TaskStatus } from "../../types/auth";
+
+const SUBTASK_STATUS_OPTIONS: TaskStatus[] = [
+  "NOT_STARTED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+];
 
 interface Subtask {
-  id: number;
+  key: number;
+  id?: number;
   title: string;
+  status: TaskStatus;
 }
 
 interface Attachment {
@@ -55,11 +73,13 @@ const SectionLabel = ({ children }: { children: string }) => (
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const EditTask = () => {
+  const { id } = useParams();
+  const { getTaskById, updateTask, updateTaskLoading } = useTask();
   const navigate = useNavigate();
 
   // ── Form state
   const [priority, setPriority] = useState<Priority | "">("");
-  const [status, setStatus] = useState<Status | "">("");
+  const [status, setStatus] = useState<Exclude<Status, "All"> | "">("");
   const [title, setTitle] = useState("");
   const [dateCreated, setDateCreated] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -67,18 +87,80 @@ const EditTask = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [initialSubtaskIds, setInitialSubtaskIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    const fetchTask = async () => {
+      const taskId = Number(id);
+
+      if (!taskId || Number.isNaN(taskId)) {
+        setError("Invalid task id.");
+        setLoading(false);
+        return;
+      }
+
+      const data = await getTaskById(taskId);
+      if (!data) {
+        setError("Task not found.");
+        setLoading(false);
+        return;
+      }
+
+      setPriority(priorityLabelMap[data.priority]);
+      setStatus(statusLabelMap[data.status]);
+      setTitle(data.title);
+      setDateCreated(data.createdDate.slice(0, 10));
+      setDueDate(data.dueDate ? data.dueDate.slice(0, 10) : "");
+      setDetails(data.details ?? "");
+      setSubtasks(
+        data.subtasks.map((s) => ({
+          key: s.id,
+          id: s.id,
+          title: s.name,
+          status: s.status,
+        })),
+      );
+      setInitialSubtaskIds(new Set(data.subtasks.map((s) => s.id)));
+      setAttachments(
+        data.attachments.map((a) => ({
+          id: a.id,
+          name: decodeURIComponent(
+            a.attachmentUrl.split("/").pop() ?? `attachment-${a.id}`,
+          ),
+          size: "-",
+        })),
+      );
+
+      setLoading(false);
+    };
+
+    void fetchTask();
+  }, [getTaskById, id]);
 
   // ── Subtask handlers
   const addSubtask = () =>
-    setSubtasks((prev) => [...prev, { id: Date.now(), title: "" }]);
+    setSubtasks((prev) => [
+      ...prev,
+      { key: Date.now(), title: "", status: "NOT_STARTED" },
+    ]);
 
-  const updateSubtask = (id: number, value: string) =>
+  const updateSubtask = (key: number, value: string) =>
     setSubtasks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, title: value } : s)),
+      prev.map((s) => (s.key === key ? { ...s, title: value } : s)),
     );
 
-  const removeSubtask = (id: number) =>
-    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  const updateSubtaskStatus = (key: number, status: TaskStatus) =>
+    setSubtasks((prev) =>
+      prev.map((s) => (s.key === key ? { ...s, status } : s)),
+    );
+
+  const removeSubtask = (key: number) =>
+    setSubtasks((prev) => prev.filter((s) => s.key !== key));
 
   // ── Attachment handlers
   const handleFiles = (files: FileList | null) => {
@@ -98,12 +180,53 @@ const EditTask = () => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   // ── Submit
-  const handleSave = () => {
-    // TODO: wire to your task store / API
-    navigate("/app");
+  const handleSave = async () => {
+    const taskId = Number(id);
+    if (!taskId || Number.isNaN(taskId)) {
+      setError("Invalid task id.");
+      return;
+    }
+
+    if (!priority || !status || !title.trim()) {
+      setError("Title, priority, and status are required.");
+      return;
+    }
+
+    const validSubtasks = subtasks
+      .map((s) => ({ ...s, title: s.title.trim() }))
+      .filter((s) => s.title.length > 0);
+
+    const remainingIds = new Set(
+      validSubtasks.map((s) => s.id).filter((sid): sid is number => sid !== undefined),
+    );
+
+    const deleteSubtaskIds = Array.from(initialSubtaskIds).filter(
+      (sid) => !remainingIds.has(sid),
+    );
+
+    const success = await updateTask(taskId, {
+      title: title.trim(),
+      details: details.trim() || undefined,
+      priority: priorityValueMap[priority],
+      status: statusValueMap[status],
+      dueDate: dueDate || undefined,
+      subtasks: validSubtasks.map((s) => ({
+        id: s.id,
+        name: s.title,
+        status: s.status,
+      })),
+      deleteSubtaskIds,
+    });
+
+    if (!success) {
+      setError("Failed to update task. Please try again.");
+      return;
+    }
+
+    navigate("/dashboard");
   };
 
-  const handleCancel = () => navigate("/app");
+  const handleCancel = () => navigate("/dashboard");
 
   // ── Shared input sx
   const inputSx = {
@@ -113,6 +236,42 @@ const EditTask = () => {
       fontSize: "0.9rem",
     },
   };
+
+  if (loading) {
+    return (
+      <Container
+        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      >
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: "70vh" }}>
+          <CircularProgress size={30} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container
+        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      >
+        <Box
+          sx={{
+            mx: "auto",
+            mt: 10,
+            p: 3,
+            borderRadius: "12px",
+            border: "1px solid",
+            borderColor: "rgba(239,68,68,0.2)",
+            bgcolor: "rgba(239,68,68,0.05)",
+          }}
+        >
+          <Typography sx={{ color: "#b91c1c", fontWeight: 600 }}>
+            {error}
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container
@@ -174,7 +333,9 @@ const EditTask = () => {
                 label="Select status"
                 size="small"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as Status)}
+                onChange={(e) =>
+                  setStatus(e.target.value as Exclude<Status, "All">)
+                }
                 slotProps={{
                   inputLabel: {
                     shrink: true,
@@ -186,7 +347,7 @@ const EditTask = () => {
                   [
                     "Not Started",
                     "In Progress",
-                    "Complete",
+                    "Completed",
                     "Cancelled",
                   ] as Status[]
                 ).map((s) => (
@@ -236,6 +397,9 @@ const EditTask = () => {
                   value={dateCreated}
                   onChange={(e) => setDateCreated(e.target.value)}
                   slotProps={{
+                    htmlInput: {
+                      min: today,
+                    },
                     input: {
                       startAdornment: (
                         <CalendarToday
@@ -266,6 +430,9 @@ const EditTask = () => {
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   slotProps={{
+                    htmlInput: {
+                      min: today,
+                    },
                     input: {
                       startAdornment: (
                         <CalendarToday
@@ -499,7 +666,7 @@ const EditTask = () => {
                 <Stack spacing={1}>
                   {subtasks.map((s, idx) => (
                     <Stack
-                      key={s.id}
+                      key={s.key}
                       direction="row"
                       alignItems="center"
                       spacing={1}
@@ -516,13 +683,28 @@ const EditTask = () => {
                         size="small"
                         placeholder={`Subtask ${idx + 1}…`}
                         value={s.title}
-                        onChange={(e) => updateSubtask(s.id, e.target.value)}
+                        onChange={(e) => updateSubtask(s.key, e.target.value)}
                         sx={inputSx}
                       />
+                      <TextField
+                        select
+                        size="small"
+                        value={s.status}
+                        onChange={(e) =>
+                          updateSubtaskStatus(s.key, e.target.value as TaskStatus)
+                        }
+                        sx={{ ...inputSx, minWidth: 170 }}
+                      >
+                        {SUBTASK_STATUS_OPTIONS.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {statusLabelMap[option]}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                       <Tooltip title="Remove subtask">
                         <IconButton
                           size="small"
-                          onClick={() => removeSubtask(s.id)}
+                          onClick={() => removeSubtask(s.key)}
                           sx={{
                             color: "text.disabled",
                             flexShrink: 0,
@@ -572,7 +754,7 @@ const EditTask = () => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={!title.trim()}
+          disabled={!title.trim() || updateTaskLoading}
           sx={{
             borderRadius: "25px",
             textTransform: "none",
@@ -586,7 +768,7 @@ const EditTask = () => {
             "&.Mui-disabled": { opacity: 0.5 },
           }}
         >
-          Save Task
+          {updateTaskLoading ? "Saving..." : "Save Task"}
         </Button>
       </Box>
     </Container>

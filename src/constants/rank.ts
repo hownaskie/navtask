@@ -16,6 +16,6 @@ export const STATUS_RANK: Record<Status, number> = {
   All: 0,
   "Not Started": 1,
   "In Progress": 2,
-  Complete: 3,
+  Completed: 3,
   Cancelled: 4
 };

@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Stack,
@@ -18,95 +19,142 @@ import {
   DeleteOutlined,
 } from "@mui/icons-material";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
+import StatusChip from "../../components/StatusChip";
+import TaskProgressStatus from "../../components/TaskProgressStatus/TaskProgressStatus";
+import SectionLabel from "../../components/SectionLabel";
+import { useTask } from "../../hooks/useTask";
+import { getTaskProgressByStatus } from "../../utils";
+import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
+import type { Priority, Status } from "../../types/dashboard";
+import { priorityLabelMap, statusLabelMap } from "../../constants/task";
 
-interface ColorConfig {
-  color: string;
-  bg: string;
-  dot: string;
-}
+type TaskSubtaskView = {
+  id: number;
+  title: string;
+  status: Exclude<Status, "All">;
+};
 
-const subtasks = [
-  { id: 1, title: "Research and gather requirements", status: "Complete" },
-  { id: 2, title: "Create wireframes and mockups", status: "Complete" },
-  { id: 3, title: "Implement frontend components", status: "In Progress" },
-  { id: 4, title: "Write unit tests", status: "Not Started" },
-  { id: 5, title: "Deploy to staging environment", status: "Not Started" },
-];
-
-const SectionLabel = ({ children }: { children: ReactNode }) => (
-  <Typography
-    sx={{
-      fontSize: "0.62rem",
-      fontWeight: 700,
-      textTransform: "uppercase",
-      letterSpacing: 0.6,
-      color: "text.disabled",
-      mb: 0.5,
-    }}
-  >
-    {children}
-  </Typography>
-);
-
-const StatusChip = ({
-  value,
-  map,
-}: {
-  value: string;
-  map: Record<string, ColorConfig>;
-}) => {
-  const s = map[value] ?? {
-    color: "#94a3b8",
-    bg: "#f8fafc",
-    border: "#e2e8f0",
-  };
-  return (
-    <Box
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 0.75,
-        px: 1.25,
-        py: 0.4,
-        borderRadius: "8px",
-        border: "1px solid",
-        borderColor: s.dot,
-        bgcolor: s.bg,
-      }}
-    >
-      <Box
-        sx={{
-          width: 7,
-          height: 7,
-          borderRadius: "50%",
-          bgcolor: s.color,
-          flexShrink: 0,
-        }}
-      />
-      <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: s.color }}>
-        {value}
-      </Typography>
-    </Box>
-  );
+type TaskDetails = {
+  id: number;
+  title: string;
+  details: string;
+  createdDate: string;
+  updatedDate: string;
+  dueDate: string | null;
+  priority: Priority;
+  status: Exclude<Status, "All">;
 };
 
 const ViewTask = () => {
-  const [tasks, setTasks] = useState(subtasks);
+  const { id } = useParams();
+  const { getTaskById } = useTask();
+
+  const [task, setTask] = useState<TaskDetails | null>(null);
+  const [subtasks, setSubtasks] = useState<TaskSubtaskView[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTask = async () => {
+      const taskId = Number(id);
+
+      if (!taskId || Number.isNaN(taskId)) {
+        setError("Invalid task id.");
+        setLoading(false);
+        return;
+      }
+
+      const data = await getTaskById(taskId);
+      if (!data) {
+        setError("Task not found.");
+        setLoading(false);
+        return;
+      }
+
+      setTask({
+        id: data.id,
+        title: data.title,
+        details: data.details ?? "No details provided.",
+        createdDate: data.createdDate,
+        updatedDate: data.updatedDate,
+        dueDate: data.dueDate,
+        priority: priorityLabelMap[data.priority],
+        status: statusLabelMap[data.status],
+      });
+
+      setSubtasks(
+        data.subtasks.map((subtask) => ({
+          id: subtask.id,
+          title: subtask.name,
+          status: statusLabelMap[subtask.status],
+        })),
+      );
+
+      setLoading(false);
+    };
+
+    void fetchTask();
+  }, [getTaskById, id]);
 
   const toggle = (id: number) =>
-    setTasks((prev) =>
+    setSubtasks((prev) =>
       prev.map((t) =>
         t.id === id
           ? {
               ...t,
-              status: t.status === "Complete" ? "Not Started" : "Complete",
+              status: t.status === "Completed" ? "Not Started" : "Completed",
             }
           : t,
       ),
     );
 
-  const completed = tasks.filter((t) => t.status === "Complete").length;
-  const progress = Math.round((completed / tasks.length) * 100);
+  const completed = subtasks.filter((t) => t.status === "Completed").length;
+  const { completed: progressCompleted, total: progressTotal } =
+    getTaskProgressByStatus(task?.status ?? "Not Started", completed, subtasks.length);
+  const completionDate =
+    task?.status === "Completed"
+      ? formatDateDdMmmYyyy(task.updatedDate)
+      : undefined;
+  const progress =
+    progressTotal > 0
+      ? Math.round((progressCompleted / progressTotal) * 100)
+      : 0;
+
+  if (loading) {
+    return (
+      <Container
+        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      >
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: "70vh" }}>
+          <CircularProgress size={30} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error || !task) {
+    return (
+      <Container
+        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      >
+        <Box
+          sx={{
+            mx: "auto",
+            mt: 10,
+            p: 3,
+            borderRadius: "12px",
+            border: "1px solid",
+            borderColor: "rgba(239,68,68,0.2)",
+            bgcolor: "rgba(239,68,68,0.05)",
+          }}
+        >
+          <Typography sx={{ color: "#b91c1c", fontWeight: 600 }}>
+            {error ?? "Task not found."}
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container
@@ -130,44 +178,16 @@ const ViewTask = () => {
             justifyContent="space-between"
             mb={3}
           >
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <StatusChip value="High" map={PRIORITY_COLORS} />
+            <Stack direction="row" alignItems="center" spacing={1.5} gap={8}>
+              <StatusChip value={task.priority} map={PRIORITY_COLORS} />
 
               {/* Circle progress status */}
-              <Stack direction="row" alignItems="center" spacing={0.75}>
-                <Box sx={{ position: "relative", display: "inline-flex" }}>
-                  {/* Background track */}
-                  <CircularProgress
-                    variant="determinate"
-                    value={100}
-                    size={22}
-                    thickness={4}
-                    sx={{ color: "rgba(37,99,235,0.1)" }}
-                  />
-                  {/* Foreground value */}
-                  <CircularProgress
-                    variant="determinate"
-                    value={(completed / tasks.length) * 100}
-                    size={22}
-                    thickness={22}
-                    sx={{
-                      color: "#3b82f6",
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                    }}
-                  />
-                </Box>
-                <Typography
-                  sx={{
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    color: "#3b82f6",
-                  }}
-                >
-                  In Progress
-                </Typography>
-              </Stack>
+              <TaskProgressStatus
+                status={task.status}
+                completed={progressCompleted}
+                total={progressTotal}
+                statusDate={completionDate}
+              />
             </Stack>
 
             <Stack direction="row" spacing={0.5}>
@@ -194,7 +214,7 @@ const ViewTask = () => {
               mb: 2.5,
             }}
           >
-            Redesign the onboarding flow for new users
+            {task.title}
           </Typography>
 
           {/* Dates */}
@@ -206,7 +226,7 @@ const ViewTask = () => {
                 <Typography
                   sx={{ fontSize: "0.875rem", color: "text.secondary" }}
                 >
-                  Mar 1, 2026
+                  {formatDate(task.createdDate)}
                 </Typography>
               </Stack>
             </Box>
@@ -221,7 +241,7 @@ const ViewTask = () => {
                     fontWeight: 500,
                   }}
                 >
-                  Mar 20, 2026
+                  {task.dueDate ? formatDate(task.dueDate) : "No due date"}
                 </Typography>
               </Stack>
             </Box>
@@ -259,10 +279,7 @@ const ViewTask = () => {
                 mt: 0.5,
               }}
             >
-              The current onboarding experience has a high drop-off rate after
-              step 2. This task involves auditing the existing flow, identifying
-              friction points, and redesigning the screens to improve activation
-              rates by at least 20%.
+              {task.details}
             </Typography>
           </Box>
 
@@ -278,7 +295,7 @@ const ViewTask = () => {
             >
               <SectionLabel>Subtasks</SectionLabel>
               <Typography sx={{ fontSize: "0.75rem", color: "text.disabled" }}>
-                {completed}/{tasks.length} complete
+                {completed}/{subtasks.length} complete
               </Typography>
             </Stack>
 
@@ -299,24 +316,24 @@ const ViewTask = () => {
             />
 
             <Stack spacing={0.75}>
-              {tasks.map((task) => (
+              {subtasks.map((taskItem) => (
                 <Stack
-                  key={task.id}
+                  key={taskItem.id}
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
-                  onClick={() => toggle(task.id)}
+                  onClick={() => toggle(taskItem.id)}
                   sx={{
                     px: 1.5,
                     py: 1,
                     borderRadius: "10px",
                     border: "1px solid",
                     borderColor:
-                      task.status === "Complete"
+                      taskItem.status === "Completed"
                         ? "rgba(34,197,94,0.2)"
                         : "divider",
                     bgcolor:
-                      task.status === "Complete"
+                      taskItem.status === "Completed"
                         ? "rgba(34,197,94,0.03)"
                         : "white",
                     cursor: "pointer",
@@ -328,7 +345,7 @@ const ViewTask = () => {
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1.25}>
-                    {task.status === "Complete" ? (
+                    {taskItem.status === "Completed" ? (
                       <CheckCircle sx={{ fontSize: 18, color: "#22c55e" }} />
                     ) : (
                       <RadioButtonUnchecked
@@ -340,17 +357,19 @@ const ViewTask = () => {
                         fontSize: "0.875rem",
                         fontWeight: 500,
                         color:
-                          task.status === "Complete"
+                          taskItem.status === "Completed"
                             ? "text.disabled"
                             : "text.primary",
                         textDecoration:
-                          task.status === "Complete" ? "line-through" : "none",
+                          taskItem.status === "Completed"
+                            ? "line-through"
+                            : "none",
                       }}
                     >
-                      {task.title}
+                      {taskItem.title}
                     </Typography>
                   </Stack>
-                  <StatusChip value={task.status} map={STATUS_COLORS} />
+                  <StatusChip value={taskItem.status} map={STATUS_COLORS} />
                 </Stack>
               ))}
             </Stack>

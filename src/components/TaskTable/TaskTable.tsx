@@ -6,7 +6,7 @@ import {
   UnfoldMore,
 } from "@mui/icons-material";
 import {
-  Button,
+  Box,
   Checkbox,
   Chip,
   IconButton,
@@ -20,14 +20,16 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
-import type { SortDir, SortKey, Priority, Status } from "../../types/dashboard";
-import type { TaskResponse } from '../../interfaces/task'
+import { PRIORITY_COLORS } from "../../constants/colors";
+import { priorityLabelMap, statusLabelMap } from "../../constants/task";
+import type { SortDir, SortKey } from "../../types/dashboard";
+import type { TaskResponse } from "../../interfaces/task";
 import { formatDate } from "../../utils";
+import { getTaskProgress } from "../../utils";
 import TaskTableSkeleton from "../TaskTableSkeleton";
+import TaskProgressStatus from "../TaskProgressStatus/TaskProgressStatus";
 
 const SortHeader = ({
   label,
@@ -135,50 +137,62 @@ const TaskTable = ({
         <TaskTableSkeleton rows={rowsPerPage} />
       ) : (
         <>
-          {selectedCount > 0 && (
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{
-                px: 2,
-                py: 1.2,
-                bgcolor: "rgba(37,99,235,0.06)",
-                borderBottom: "1.5px solid rgba(37,99,235,0.15)",
-              }}
-            >
-              <Typography variant="body2" fontWeight={600} color="primary.main">
-                {selectedCount} row{selectedCount !== 1 ? "s" : ""} selected
-              </Typography>
-              <Button
-                size="small"
-                variant="contained"
-                color="error"
-                startIcon={<DeleteOutline fontSize="small" />}
-                onClick={onDeleteSelected}
-                sx={{ borderRadius: "8px", fontSize: "0.78rem", py: 0.6 }}
-              >
-                Delete selected ({selectedCount})
-              </Button>
-            </Stack>
-          )}
-
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: "rgba(37,99,235,0.03)" }}>
                 <TableCell padding="checkbox" sx={{ pl: 2, width: 48 }}>
-                  <Checkbox
-                    checked={allPageSelected}
-                    indeterminate={somePageSelected}
-                    onChange={onSelectAll}
-                    size="small"
-                    sx={{
-                      color: "#CBD5E1",
-                      "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                        color: "primary.main",
-                      },
-                    }}
-                  />
+                  {selectedCount > 0 ? (
+                    <Box sx={{ position: "relative", display: "inline-flex" }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteSelected();
+                        }}
+                        sx={{
+                          color: "#2563EB",
+                          bgcolor: "rgba(59,130,246,0.14)",
+                          borderRadius: "10px",
+                          "&:hover": { bgcolor: "rgba(59,130,246,0.2)" },
+                        }}
+                      >
+                        <DeleteOutline fontSize="small" />
+                      </IconButton>
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: -6,
+                          right: -8,
+                          minWidth: 18,
+                          height: 18,
+                          px: 0.5,
+                          borderRadius: "999px",
+                          bgcolor: "#dbeafe",
+                          color: "#1d4ed8",
+                          display: "grid",
+                          placeItems: "center",
+                          border: "1px solid rgba(59,130,246,0.35)",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: "0.65rem", fontWeight: 700 }}>
+                          {selectedCount}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Checkbox
+                      checked={allPageSelected}
+                      indeterminate={somePageSelected}
+                      onChange={onSelectAll}
+                      size="small"
+                      sx={{
+                        color: "#CBD5E1",
+                        "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                          color: "primary.main",
+                        },
+                      }}
+                    />
+                  )}
                 </TableCell>
                 <SortHeader
                   label="Title"
@@ -228,12 +242,9 @@ const TaskTable = ({
                 paginated.map((task, idx) => {
                   const isSelected = selectedIds.has(task.id);
                   const isDone = task.status === "COMPLETED";
-                  const pStyle =
-                    PRIORITY_COLORS[task.priority as Priority] ??
-                    PRIORITY_COLORS["High"];
-                  const sStyle =
-                    STATUS_COLORS[task.status as Status] ??
-                    STATUS_COLORS["Not Started"];
+                  const { completed: progressCompleted, total: progressTotal } =
+                    getTaskProgress(task);
+                  const pStyle = PRIORITY_COLORS[priorityLabelMap[task.priority]];
                   return (
                     <TableRow
                       key={task.id}
@@ -293,7 +304,9 @@ const TaskTable = ({
                           color="text.secondary"
                           fontSize="0.82rem"
                         >
-                          {task.dueDate ? formatDate(task.dueDate) : "No due date"}
+                          {task.dueDate
+                            ? formatDate(task.dueDate)
+                            : "No due date"}
                         </Typography>
                       </TableCell>
 
@@ -314,39 +327,27 @@ const TaskTable = ({
                       </TableCell>
 
                       <TableCell sx={{ py: 1.5, px: 2 }}>
-                        <Chip
-                          label={task.status}
-                          size="small"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.72rem",
-                            height: 22,
-                            bgcolor: sStyle.bg,
-                            color: sStyle.color,
-                            border: "none",
-                            "& .MuiChip-label": { px: 1 },
-                          }}
+                        <TaskProgressStatus
+                          status={statusLabelMap[task.status]}
+                          completed={progressCompleted}
+                          total={progressTotal}
                         />
                       </TableCell>
 
                       <TableCell sx={{ py: 1.5, px: 1 }}>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            className="row-edit"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditTask(task.id);
-                            }}
-                            sx={{
-                              opacity: 0,
-                              transition: "opacity 0.15s",
-                              color: "primary.main",
-                            }}
-                          >
-                            <EditOutlined fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <IconButton
+                          className="row-edit"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditTask(task.id);
+                          }}
+                          sx={{
+                            color: "primary.secondary",
+                          }}
+                        >
+                          <EditOutlined fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   );

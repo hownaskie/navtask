@@ -1,13 +1,27 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { taskApi } from "../services/api";
-import type { CreateTaskRequest, TaskResponse } from '../interfaces/task'
+import type {
+  CreateTaskRequest,
+  TaskResponse,
+  UpdateTaskRequest,
+} from "../interfaces/task";
 
-export const useTask = () => {
+interface UseTaskOptions {
+  autoFetch?: boolean;
+}
+
+export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(autoFetch);
   const [createTaskLoading, setCreateTaskLoading] = useState<boolean>(false);
+  const [updateTaskLoading, setUpdateTaskLoading] = useState<boolean>(false);
 
   useEffect(() => {
+    if (!autoFetch) {
+      setLoading(false);
+      return;
+    }
+
     const fetchTasks = async () => {
       try {
         const res = await taskApi.getAll();
@@ -19,7 +33,7 @@ export const useTask = () => {
       }
     };
     fetchTasks();
-  }, []);
+  }, [autoFetch]);
 
   const createTask = async (taskData: CreateTaskRequest) => {
     try {
@@ -32,5 +46,39 @@ export const useTask = () => {
     }
   };
 
-  return { tasks, loading, createTask, createTaskLoading };
+  const getTaskById = useCallback(
+    async (id: number): Promise<TaskResponse | null> => {
+      try {
+        const res = await taskApi.getById(id);
+        return res.data.data;
+      } catch (err) {
+        console.error("Error fetching task by id:", err);
+        return null;
+      }
+    },
+    [],
+  );
+
+  const updateTask = async (id: number, taskData: UpdateTaskRequest) => {
+    try {
+      setUpdateTaskLoading(true);
+      await taskApi.update(id, taskData);
+      return true;
+    } catch (err) {
+      console.error("Error updating task:", err);
+      return false;
+    } finally {
+      setUpdateTaskLoading(false);
+    }
+  };
+
+  return {
+    tasks,
+    loading,
+    createTask,
+    createTaskLoading,
+    updateTask,
+    updateTaskLoading,
+    getTaskById,
+  };
 };

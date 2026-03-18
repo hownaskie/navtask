@@ -9,3 +9,4 @@ export * from "./sort";
 export * from "./status";
 export * from "./theme";
 export * from "./validation";
+export * from "./taskProgress";

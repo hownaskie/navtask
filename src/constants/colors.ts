@@ -8,7 +8,7 @@ export const PRIORITY_COLORS: Record<
   { bg: string; color: string; dot: string }
 > = {
   Low: { bg: "rgba(16,185,129,0.1)", color: "#059669", dot: "#059669" },
-  High: { bg: "rgba(245,158,11,0.1)", color: "#D97706", dot: "#D97706" },
+  High: { bg: "rgba(245,158,11,0.12)", color: "#F59E0B", dot: "#F59E0B" },
   Critical: { bg: "rgba(239,68,68,0.1)", color: "#DC2626", dot: "#DC2626" },
 };
 
@@ -29,6 +29,6 @@ export const STATUS_COLORS: Record<Status, { bg: string; color: string; dot: str
       color: "#2563EB",
       dot: "#2563EB",
     },
-    Complete: { bg: "rgba(16,185,129,0.1)", color: "#059669", dot: "#059669" },
+    Completed: { bg: "rgba(16,185,129,0.1)", color: "#059669", dot: "#059669" },
     Cancelled: { bg: "rgba(239,68,68,0.1)", color: "#DC2626", dot: "#DC2626" },
   };

@@ -1,5 +1,6 @@
 import type { Priority, Status, SortKey, SortDir } from "../types/dashboard";
 import type { TaskResponse } from '../interfaces/task'
+import { priorityLabelMap, statusLabelMap } from "../constants/task";
 import { compareValues } from "./sort";
 
 export interface FilterCriteria {
@@ -21,10 +22,10 @@ export const filterTasks = (tasks: TaskResponse[], filters: FilterCriteria): Tas
       : true;
     const priorityMatch =
       filters.priority.size > 0
-        ? filters.priority.has(t.priority as Priority)
+        ? filters.priority.has(priorityLabelMap[t.priority])
         : true;
     const statusMatch =
-      filters.status.size > 0 ? filters.status.has(t.status as Status) : true;
+      filters.status.size > 0 ? filters.status.has(statusLabelMap[t.status]) : true;
     return titleMatch && priorityMatch && statusMatch;
   });
 };

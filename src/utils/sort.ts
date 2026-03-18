@@ -19,14 +19,14 @@ const normalizeStatus = (status: string): keyof typeof STATUS_RANK => {
   const key = status.toUpperCase();
   if (key === "NOT_STARTED") return "Not Started";
   if (key === "IN_PROGRESS") return "In Progress";
-  if (key === "COMPLETED") return "Complete";
+  if (key === "COMPLETED") return "Completed";
   if (key === "CANCELLED") return "Cancelled";
   if (key === "ALL") return "All";
 
   // Also support already-humanized labels.
   if (status === "Not Started") return "Not Started";
   if (status === "In Progress") return "In Progress";
-  if (status === "Complete") return "Complete";
+  if (status === "Completed") return "Completed";
   if (status === "Cancelled") return "Cancelled";
   return "All";
 };

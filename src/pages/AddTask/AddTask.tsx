@@ -73,6 +73,7 @@ const AddTask = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
 
   // ── Subtask handlers
   const addSubtask = () =>
@@ -209,7 +210,7 @@ const AddTask = () => {
                   [
                     { label: "Not Started", value: "NOT_STARTED" },
                     { label: "In Progress", value: "IN_PROGRESS" },
-                    { label: "Complete", value: "COMPLETED" },
+                    { label: "Completed", value: "COMPLETED" },
                     { label: "Cancelled", value: "CANCELLED" },
                   ] as { label: string; value: string }[]
                 ).map((s) => (
@@ -259,6 +260,9 @@ const AddTask = () => {
                   value={dateCreated}
                   onChange={(e) => setDateCreated(e.target.value)}
                   slotProps={{
+                    htmlInput: {
+                      min: today,
+                    },
                     input: {
                       startAdornment: (
                         <CalendarToday
@@ -289,6 +293,9 @@ const AddTask = () => {
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   slotProps={{
+                    htmlInput: {
+                      min: today,
+                    },
                     input: {
                       startAdornment: (
                         <CalendarToday

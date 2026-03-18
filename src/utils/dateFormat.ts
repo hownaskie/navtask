@@ -9,3 +9,13 @@ export const formatDate = (iso: string): string =>
     day: "numeric",
     year: "numeric",
   });
+
+/**
+ * Format ISO date as dd MMM YYYY (e.g., "10 Apr 2025")
+ */
+export const formatDateDdMmmYyyy = (iso: string): string =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });

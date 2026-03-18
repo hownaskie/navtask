@@ -1,12 +1,8 @@
 import { useState, useMemo, useRef } from "react";
-import {
-  Add,
-  FilterList,
-} from "@mui/icons-material";
+import { Add, FilterList } from "@mui/icons-material";
 import {
   Alert,
   Badge,
-  Box,
   Button,
   Chip,
   Container,
@@ -14,7 +10,6 @@ import {
   Snackbar,
   Stack,
   Tooltip,
-  Typography,
 } from "@mui/material";
 import {
   getStatusCards,
@@ -38,7 +33,7 @@ import TaskTable from "../../components/TaskTable";
 // ── Page ──────────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { tasks, loading } = useTask();
+  const { tasks, loading } = useTask({ autoFetch: true });
   const [snack, setSnack] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("dueDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -154,16 +149,6 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* ── Header ── */}
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Track, sort and manage all your tasks in one place.
-        </Typography>
-      </Box>
-
       {/* ── Stat cards ── */}
       <StatusCard
         card={getStatusCards({ total, done, highCount, progress })}
@@ -313,7 +298,6 @@ const Dashboard = () => {
 
       {/* ── Filter dialog (Popper) ── */}
       <FilterDialog
-        // eslint-disable-next-line react-hooks/refs
         anchorEl={filterBtnRef.current}
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
