@@ -1,73 +1,130 @@
-# React + TypeScript + Vite
+# NavTask Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend application for NavTask, built with React, TypeScript, Vite, and MUI.
 
-Currently, two official plugins are available:
+NavTask lets users authenticate, create/update tasks, manage subtasks and attachments, and track task progress through dashboard and detail views.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
 
-## React Compiler
+- React 19
+- TypeScript
+- Vite
+- Material UI (`@mui/material`, `@mui/icons-material`)
+- React Router
+- Axios
+- ESLint (flat config)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+- Authentication flow
+  - Login, signup
+  - OAuth callback support
+  - Protected routes + guest-only routes
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Task management
+  - List tasks in dashboard table
+  - Add task
+  - Edit task
+  - View task details
+  - Delete selected tasks (UI-triggered)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Subtasks and progress
+  - Add/remove/edit subtasks
+  - Subtask status handling
+  - Status-based progress display:
+    - `In Progress` => quarter progress
+    - `Completed` => full progress
+    - `Cancelled` => cancelled icon treatment
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Attachments
+  - Drag/drop or browse in task forms
+  - Existing attachments displayed in edit/view flows
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Filtering and sorting
+  - Dashboard filtering by priority/status
+  - Route-aware + status-aware sorting utilities
+
+## Project Structure
+
+```text
+src/
+  components/      Reusable UI building blocks
+  constants/       Shared constants (colors, labels, rank maps)
+  context/         Auth context/provider
+  hooks/           Reusable hooks (task/auth state + API)
+  interfaces/      API request/response contracts
+  pages/           Route-level pages
+  routes/          Route registry + route groups
+  services/        Axios API clients
+  types/           Shared frontend union/value types
+  utils/           Formatting, filtering, sorting, progress helpers
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Node.js 18+
+- npm 9+
+- Backend service running at `http://localhost:8080`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Getting Started
+
+1. Install dependencies
+
+```bash
+npm install
+```
+
+2. Start development server
+
+```bash
+npm run dev
+```
+
+3. Open app
+
+```text
+http://localhost:5173
+```
+
+## Available Scripts
+
+- `npm run dev` - Start Vite dev server
+- `npm run build` - Type-check and build production bundle
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint
+
+## Backend Integration
+
+- Frontend API base URL: `/api/v1` (configured in `src/services/api.ts`)
+- Vite dev proxy forwards `/api/*` to:
+  - `http://localhost:8080`
+
+This means you can run frontend on `:5173` and backend on `:8080` without CORS setup in local dev.
+
+## Authentication and Routing
+
+- Route configuration is centralized under `src/routes`
+- `ProtectedRoute` guards authenticated pages
+- `GuestRoute` prevents authenticated users from accessing login/signup pages
+
+Default route behavior:
+
+- `/` redirects to `/login`
+- `*` routes render Not Found page
+
+## Notes for Local Full-Stack Run
+
+If you are running the backend from the sibling project (`navtask-microservice`), start it first (for example with Docker Compose), then run this frontend.
+
+Backend docs (from microservice project):
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- API base: `http://localhost:8080/api/v1`
+
+## Build Output
+
+Production assets are generated in `dist/` after:
+
+```bash
+npm run build
 ```
