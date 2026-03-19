@@ -14,11 +14,6 @@ const protectedRoutes: RouteConfig[] = [
     protected: true,
   },
   {
-    path: "/products",
-    element: <div>Products Page (Protected)</div>,
-    protected: true,
-  },
-  {
     path: "/add",
     element: <AddTask />,
     protected: true,

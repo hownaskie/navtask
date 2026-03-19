@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import {
   DashboardOutlined,
-  Inventory2Outlined,
   Logout,
   MenuOutlined,
   NightlightRound,
@@ -36,7 +35,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: <DashboardOutlined />, path: "/dashboard" },
-  { label: "Products", icon: <Inventory2Outlined />, path: "/products" },
 ];
 
 // ── MobileMenuButton ──────────────────────────────────────────────────────────
@@ -111,7 +109,7 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
             color: "text.primary",
           }}
         >
-          TASKLY
+          NAVTASK
         </Typography>
       </Stack>
 

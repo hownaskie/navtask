@@ -14,7 +14,7 @@ interface AuthContextValue {
   user: User | null
   loading: boolean
   login: (username: string, password: string) => Promise<User>
-  register: (firstName: string, lastName: string, email: string, password: string) => Promise<User>
+  register: (username: string, password: string) => Promise<User>
   logout: () => void
   loginWithToken: (token: string) => void
 }
@@ -52,7 +52,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     password: string
   ): Promise<User> => {
-    const res = await authApi.register({ username, password })
+    const normalized = username.trim().toLowerCase()
+    const [localPart = "user"] = normalized.split("@")
+    const [firstNameRaw, secondNameRaw] = localPart
+      .split(/[._-]+/)
+      .filter(Boolean)
+
+    const firstName = firstNameRaw
+      ? firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1)
+      : "User"
+    const lastName = secondNameRaw
+      ? secondNameRaw.charAt(0).toUpperCase() + secondNameRaw.slice(1)
+      : "User"
+
+    const res = await authApi.register({
+      firstName,
+      lastName,
+      email: normalized,
+      password,
+    })
     const { token, user } = res.data.data
     localStorage.setItem('navtask_token', token)
     setUser(user)

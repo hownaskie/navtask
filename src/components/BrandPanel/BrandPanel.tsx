@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { Box, Stack, Typography } from "@mui/material";
-import TasklyIcon from "../NavTaskIcon";
+import NavtaskIcon from "../NavTaskIcon";
 
 interface BrandPanelProps {
   subtitle?: string;
@@ -51,7 +51,7 @@ const BrandPanel: FC<BrandPanelProps> = () => (
           lineHeight: 0,
         }}
       >
-        <TasklyIcon width={w.size} height={w.size} color="white" />
+        <NavtaskIcon width={w.size} height={w.size} color="white" />
       </Box>
     ))}
 
@@ -71,7 +71,7 @@ const BrandPanel: FC<BrandPanelProps> = () => (
             flexShrink: 0,
           }}
         >
-          <TasklyIcon width={50} height={50} color="white" />
+          <NavtaskIcon width={50} height={50} color="white" />
         </Box>
 
         <Stack direction="column" spacing={0.25}>

@@ -139,7 +139,7 @@ const ViewTask = () => {
   if (loading) {
     return (
       <Container
-        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+        sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box sx={{ display: "grid", placeItems: "center", minHeight: "70vh" }}>
           <CircularProgress size={30} />
@@ -151,7 +151,7 @@ const ViewTask = () => {
   if (error || !task) {
     return (
       <Container
-        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+        sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box
           sx={{
@@ -174,16 +174,16 @@ const ViewTask = () => {
 
   return (
     <Container
-      sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
     >
       <Box sx={{ mx: "auto" }}>
         {/* Card */}
         <Box
           sx={{
-            bgcolor: "white",
+            bgcolor: "background.paper",
             borderRadius: "16px",
             border: "1px solid",
-            borderColor: "rgba(37,99,235,0.12)",
+            borderColor: "divider",
             p: { xs: 2.5, sm: 3.5 },
           }}
         >
@@ -230,7 +230,7 @@ const ViewTask = () => {
             sx={{
               fontSize: "1.35rem",
               fontWeight: 700,
-              color: "#0f172a",
+              color: "text.primary",
               lineHeight: 1.35,
               mb: 2.5,
             }}
@@ -254,11 +254,11 @@ const ViewTask = () => {
             <Box>
               <SectionLabel>Due Date</SectionLabel>
               <Stack direction="row" alignItems="center" spacing={0.75}>
-                <CalendarToday sx={{ fontSize: 14, color: "#f97316" }} />
+                <CalendarToday sx={{ fontSize: 14, color: "warning.main" }} />
                 <Typography
                   sx={{
                     fontSize: "0.875rem",
-                    color: "#f97316",
+                    color: "warning.main",
                     fontWeight: 500,
                   }}
                 >
@@ -272,7 +272,8 @@ const ViewTask = () => {
           <Box
             component="fieldset"
             sx={{
-              border: "1px solid rgba(37,99,235,0.2)",
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: "12px",
               px: 2,
               pt: 0.5,
@@ -304,7 +305,7 @@ const ViewTask = () => {
             </Typography>
           </Box>
 
-          <Divider sx={{ mb: 3, borderColor: "rgba(37,99,235,0.08)" }} />
+          <Divider sx={{ mb: 3, borderColor: "divider" }} />
 
           {/* Subtasks */}
           <Box>
@@ -328,10 +329,10 @@ const ViewTask = () => {
                 mb: 2,
                 height: 5,
                 borderRadius: 4,
-                bgcolor: "rgba(37,99,235,0.08)",
+                bgcolor: "action.hover",
                 "& .MuiLinearProgress-bar": {
                   borderRadius: 4,
-                  bgcolor: "#3b82f6",
+                  bgcolor: "primary.main",
                 },
               }}
             />
@@ -356,12 +357,12 @@ const ViewTask = () => {
                     bgcolor:
                       taskItem.status === "Completed"
                         ? "rgba(34,197,94,0.03)"
-                        : "white",
+                        : "background.paper",
                     cursor: "pointer",
                     transition: "all 0.15s",
                     "&:hover": {
-                      borderColor: "rgba(37,99,235,0.25)",
-                      bgcolor: "rgba(37,99,235,0.02)",
+                      borderColor: "primary.main",
+                      bgcolor: "action.hover",
                     },
                   }}
                 >
@@ -370,7 +371,7 @@ const ViewTask = () => {
                       <CheckCircle sx={{ fontSize: 18, color: "#22c55e" }} />
                     ) : (
                       <RadioButtonUnchecked
-                        sx={{ fontSize: 18, color: "#cbd5e1" }}
+                        sx={{ fontSize: 18, color: "text.disabled" }}
                       />
                     )}
                     <Typography

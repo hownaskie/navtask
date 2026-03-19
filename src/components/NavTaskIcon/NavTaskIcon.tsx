@@ -1,6 +1,6 @@
 import type { FC, SVGProps } from "react";
 
-const TasklyIcon: FC<SVGProps<SVGSVGElement>> = ({
+const NavtaskIcon: FC<SVGProps<SVGSVGElement>> = ({
   width = 32,
   height = 32,
   color = "currentColor",
@@ -28,4 +28,4 @@ const TasklyIcon: FC<SVGProps<SVGSVGElement>> = ({
   </svg>
 );
 
-export default TasklyIcon;
+export default NavtaskIcon;

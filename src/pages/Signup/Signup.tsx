@@ -14,18 +14,14 @@ import AuthFooter from "../../components/AuthFooter";
 import { useState } from "react";
 import { useAuth } from "../../context/useAuthContext";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "../../hooks/useUser";
 import {
-  canSubmitSignup,
-  getSignupFieldErrors,
-  getSignupRuleState,
+  validateUsername,
 } from "../../utils";
 import { authApi } from "../../services/api";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { users } = useUser();
+  const { register } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,12 +30,39 @@ const Signup = () => {
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
 
-  const signupRules = getSignupRuleState(username, password, users);
-  const { usernameError, passwordError } = getSignupFieldErrors(
-    username,
-    { usernameTouched, passwordTouched },
-    signupRules,
-  );
+  const normalizedPassword = password.toLowerCase();
+  const normalizedUsername = username.trim().toLowerCase();
+  const [localPart = "", domainPart = ""] = normalizedUsername.split("@");
+
+  const hasMinLength = password.length >= 8;
+  const hasNumberOrSymbol = /[0-9]|[^A-Za-z0-9]/.test(password);
+  const excludesNameOrEmail =
+    !normalizedPassword.includes(normalizedUsername) &&
+    (!localPart || !normalizedPassword.includes(localPart)) &&
+    (!domainPart || !normalizedPassword.includes(domainPart));
+  const isStrongPassword =
+    password.length > 0 &&
+    hasMinLength &&
+    hasNumberOrSymbol &&
+    excludesNameOrEmail;
+
+  const usernameError =
+    usernameTouched && !username.trim()
+      ? "Username is required"
+      : usernameTouched
+        ? (validateUsername(username) ?? "")
+        : "";
+  const passwordError =
+    passwordTouched && (!hasMinLength || !hasNumberOrSymbol)
+      ? "Password must be at least 8 characters and include a number or symbol"
+      : "";
+
+  const canSubmit =
+    Boolean(username.trim()) &&
+    !validateUsername(username) &&
+    hasMinLength &&
+    hasNumberOrSymbol &&
+    excludesNameOrEmail;
 
   const handleGoogle = () => authApi.googleLogin();
   const handleFacebook = () => authApi.facebookLogin();
@@ -48,16 +71,16 @@ const Signup = () => {
     setUsernameTouched(true);
     setPasswordTouched(true);
     setError("");
-    if (!canSubmitSignup(username, signupRules)) {
+    if (!canSubmit) {
       return setError("Please satisfy all password requirements");
     }
 
     try {
       setLoading(true);
-      await login(username, password);
+      await register(username.trim(), password);
       navigate("/dashboard");
     } catch {
-      setError("Unable to create account with these credentials");
+      setError("Unable to create account. Please check your details.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +124,7 @@ const Signup = () => {
             >
               <TaskAlt color="primary" />{" "}
               <Typography variant="h6" color="primary">
-                Taskly
+                Navtask
               </Typography>
             </Stack>
 
@@ -115,7 +138,8 @@ const Signup = () => {
             <Stack spacing={2.5}>
               <TextField
                 label="Username"
-                placeholder="Jane Doe"
+                type="text"
+                placeholder="jane@example.com"
                 fullWidth
                 value={username}
                 error={Boolean(usernameError)}
@@ -152,25 +176,38 @@ const Signup = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
 
+              {password.length > 0 && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    mt: -1,
+                    color: isStrongPassword ? "success.main" : "error.main",
+                    fontWeight: 600,
+                  }}
+                >
+                  Password strength: {isStrongPassword ? "Strong" : "Weak"}
+                </Typography>
+              )}
+
               <Stack spacing={0.5} mt={-0.75}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography
                     component="span"
                     sx={{
-                      color: signupRules.excludesNameOrEmail
+                      color: excludesNameOrEmail
                         ? "success.main"
                         : "text.disabled",
                       fontSize: "0.9rem",
                       lineHeight: 1,
                     }}
                   >
-                    {signupRules.excludesNameOrEmail ? "✓" : "•"}
+                    {excludesNameOrEmail ? "✓" : "•"}
                   </Typography>
                   <Typography
                     variant="caption"
                     sx={{ color: "text.secondary" }}
                   >
-                    Cannot contain your name or email address
+                    Cannot contain your username or email address
                   </Typography>
                 </Stack>
 
@@ -178,14 +215,14 @@ const Signup = () => {
                   <Typography
                     component="span"
                     sx={{
-                      color: signupRules.hasMinLength
+                      color: hasMinLength
                         ? "success.main"
                         : "text.disabled",
                       fontSize: "0.9rem",
                       lineHeight: 1,
                     }}
                   >
-                    {signupRules.hasMinLength ? "✓" : "•"}
+                    {hasMinLength ? "✓" : "•"}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -199,14 +236,14 @@ const Signup = () => {
                   <Typography
                     component="span"
                     sx={{
-                      color: signupRules.hasNumberOrSymbol
+                      color: hasNumberOrSymbol
                         ? "success.main"
                         : "text.disabled",
                       fontSize: "0.9rem",
                       lineHeight: 1,
                     }}
                   >
-                    {signupRules.hasNumberOrSymbol ? "✓" : "•"}
+                    {hasNumberOrSymbol ? "✓" : "•"}
                   </Typography>
                   <Typography
                     variant="caption"

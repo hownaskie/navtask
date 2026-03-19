@@ -232,7 +232,7 @@ const EditTask = () => {
   const inputSx = {
     "& .MuiOutlinedInput-root": {
       borderRadius: "10px",
-      bgcolor: "white",
+      bgcolor: "background.paper",
       fontSize: "0.9rem",
     },
   };
@@ -240,7 +240,7 @@ const EditTask = () => {
   if (loading) {
     return (
       <Container
-        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+        sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box sx={{ display: "grid", placeItems: "center", minHeight: "70vh" }}>
           <CircularProgress size={30} />
@@ -252,7 +252,7 @@ const EditTask = () => {
   if (error) {
     return (
       <Container
-        sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+        sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box
           sx={{
@@ -275,15 +275,15 @@ const EditTask = () => {
 
   return (
     <Container
-      sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
     >
       <Box sx={{ mx: "auto" }}>
         <Box
           sx={{
-            bgcolor: "white",
+            bgcolor: "background.paper",
             borderRadius: "16px",
             border: "1px solid",
-            borderColor: "rgba(37,99,235,0.12)",
+            borderColor: "divider",
             p: { xs: 2.5, sm: 3.5 },
           }}
         >
@@ -489,9 +489,9 @@ const EditTask = () => {
                   border: "2px dashed",
                   borderColor: dragOver
                     ? "primary.main"
-                    : "rgba(37,99,235,0.2)",
+                    : "divider",
                   borderRadius: "12px",
-                  bgcolor: dragOver ? "rgba(37,99,235,0.04)" : "white",
+                  bgcolor: dragOver ? "action.hover" : "background.paper",
                   py: 3,
                   px: 1,
                   textAlign: "center",
@@ -499,7 +499,7 @@ const EditTask = () => {
                   transition: "all 0.15s",
                   "&:hover": {
                     borderColor: "primary.main",
-                    bgcolor: "rgba(37,99,235,0.04)",
+                    bgcolor: "action.hover",
                   },
                   pt: 1,
                   pb: 2,
@@ -574,7 +574,7 @@ const EditTask = () => {
                         borderRadius: "10px",
                         border: "1px solid",
                         borderColor: "divider",
-                        bgcolor: "white",
+                        bgcolor: "background.paper",
                       }}
                     >
                       <Stack direction="row" alignItems="center" spacing={1.2}>
@@ -636,10 +636,10 @@ const EditTask = () => {
                     fontWeight: 600,
                     fontSize: "0.8rem",
                     color: "primary.main",
-                    bgcolor: "rgba(37,99,235,0.06)",
+                    bgcolor: "action.hover",
                     px: 1.5,
                     py: 0.5,
-                    "&:hover": { bgcolor: "rgba(37,99,235,0.12)" },
+                    "&:hover": { bgcolor: "action.selected" },
                   }}
                 >
                   New Subtask
@@ -654,7 +654,7 @@ const EditTask = () => {
                     borderRadius: "12px",
                     border: "1.5px dashed",
                     borderColor: "divider",
-                    bgcolor: "white",
+                    bgcolor: "background.paper",
                   }}
                 >
                   <Typography variant="body2" color="text.disabled">

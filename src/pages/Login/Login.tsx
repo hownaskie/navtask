@@ -81,7 +81,7 @@ const Login = () => {
             >
               <TaskAlt color="primary" />{" "}
               <Typography variant="h6" color="primary">
-                Taskly
+                Navtask
               </Typography>
             </Stack>
 

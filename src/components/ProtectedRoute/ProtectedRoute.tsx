@@ -17,11 +17,11 @@ import ProtectedLayout from "../ProtectedLayout";
  *    → Render ProtectedLayout (sidebar + topbar + <Outlet>)
  */
 const ProtectedRoute = () => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   // Still hydrating auth from localStorage — don't redirect yet
-  if (isLoading) {
+  if (loading) {
     return (
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
         <CircularProgress />

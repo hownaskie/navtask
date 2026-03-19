@@ -19,7 +19,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/add": "New Task",
   "/edit": "Edit Task",
   "/view": "View Task",
-  "/products": "Products",
 };
 
 const ProtectedLayout = () => {
@@ -113,7 +112,7 @@ const ProtectedLayout = () => {
                   color="primary"
                   sx={{ fontSize: "1rem" }}
                 >
-                  Taskly
+                  Navtask
                 </Typography>
               </Stack>
 

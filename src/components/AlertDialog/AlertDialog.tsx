@@ -131,7 +131,7 @@ const AlertDialog = (props: AlertDialogProps) => {
             <WarningAmberRounded
               sx={{
                 fontSize: 38,
-                color: "#dc2626",
+                color: "error.main",
                 mb: 1,
               }}
             />
@@ -140,7 +140,7 @@ const AlertDialog = (props: AlertDialogProps) => {
               sx={{
                 fontSize: "1.15rem",
                 fontWeight: 700,
-                color: "#0f172a",
+                color: "text.primary",
                 mb: 0.75,
               }}
             >
@@ -156,7 +156,7 @@ const AlertDialog = (props: AlertDialogProps) => {
                 ? {
                     fontSize: "0.95rem",
                     fontWeight: 600,
-                    color: "#334155",
+                    color: "text.secondary",
                     mb: 5,
                   }
                 : undefined
