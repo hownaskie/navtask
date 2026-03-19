@@ -26,8 +26,7 @@ import { PRIORITY_COLORS } from "../../constants/colors";
 import { priorityLabelMap, statusLabelMap } from "../../constants/task";
 import type { SortDir, SortKey } from "../../types/dashboard";
 import type { TaskResponse } from "../../interfaces/task";
-import { formatDate } from "../../utils";
-import { getTaskProgress } from "../../utils";
+import { formatDate, getDueDateColor, getTaskProgress } from "../../utils";
 import TaskTableSkeleton from "../TaskTableSkeleton";
 import TaskProgressStatus from "../TaskProgressStatus/TaskProgressStatus";
 
@@ -54,7 +53,7 @@ const SortHeader = ({
       userSelect: "none",
       fontWeight: 600,
       fontSize: "0.78rem",
-      color: active ? "primary.main" : "text.secondary",
+      color: "text.secondary",
       whiteSpace: "nowrap",
       py: 1.5,
       px: 2,
@@ -304,7 +303,8 @@ const TaskTable = ({
                       <TableCell sx={{ py: 1.5, px: 2 }}>
                         <Typography
                           variant="body2"
-                          color="text.secondary"
+                          color={getDueDateColor(task.dueDate)}
+                          fontWeight={task.dueDate ? 500 : 400}
                           fontSize="0.82rem"
                         >
                           {task.dueDate

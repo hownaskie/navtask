@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import { TaskAlt } from "@mui/icons-material";
 import { useState } from "react";
-import { Visibility } from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
 import { useAuth } from "../../context/useAuthContext";
@@ -25,6 +25,7 @@ const Login = () => {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -110,7 +111,7 @@ const Login = () => {
               />
               <TextField
                 label="Password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 fullWidth
                 value={password}
                 onChange={(e) => {
@@ -141,7 +142,10 @@ const Login = () => {
                             border: "none",
                             "&:focus": { outline: "none" },
                           }}
-                          endIcon={<Visibility />}
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          endIcon={
+                            showPassword ? <VisibilityOff /> : <Visibility />
+                          }
                         />
                       </InputAdornment>
                     ),

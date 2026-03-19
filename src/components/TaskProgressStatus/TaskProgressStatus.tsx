@@ -26,7 +26,7 @@ const TaskProgressStatus = ({
           value={100}
           size={22}
           thickness={4}
-          sx={{ color: isCancelled ? "#94a3b8" : "#3b82f6" }}
+          sx={{ color: "#3b82f6" }}
         />
         {/* Foreground value */}
         <CircularProgress
@@ -49,7 +49,7 @@ const TaskProgressStatus = ({
               right: 10,
               width: 2,
               height: 18,
-              bgcolor: "#94a3b8",
+              bgcolor: "#3b82f6",
               borderRadius: 999,
               transform: "rotate(120deg)",
               transformOrigin: "center",
