@@ -4,8 +4,10 @@ export const getTheme = (mode: "light" | "dark") => createTheme({
   palette: {
     mode: mode,
     primary: { main: "#2563EB", light: "#3B82F6", dark: "#1D4ED8" },
-    background: { default: "#EEF2FF", paper: "#FFFFFF" },
-    text: { primary: "#0F172A", secondary: "#64748B" },
+    ...(mode === "light" ? {
+      background: { default: "#EEF2FF", paper: "#FFFFFF" },
+      text: { primary: "#0F172A", secondary: "#64748B" },
+    } : {}),
     success: { main: "#10B981" },
   },
   typography: {

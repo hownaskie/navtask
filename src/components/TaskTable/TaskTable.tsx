@@ -81,6 +81,7 @@ interface TaskTableProps {
   loading: boolean;
   rowsPerPage: number;
   selectedCount: number;
+  deleteLoading: boolean;
   selectedIds: Set<number>;
   allPageSelected: boolean;
   somePageSelected: boolean;
@@ -104,6 +105,7 @@ const TaskTable = ({
   loading,
   rowsPerPage,
   selectedCount,
+  deleteLoading,
   selectedIds,
   allPageSelected,
   somePageSelected,
@@ -145,6 +147,7 @@ const TaskTable = ({
                     <Box sx={{ position: "relative", display: "inline-flex" }}>
                       <IconButton
                         size="small"
+                        disabled={deleteLoading}
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteSelected();
@@ -255,10 +258,10 @@ const TaskTable = ({
                       }}
                       sx={{
                         bgcolor: isSelected
-                          ? "rgba(37,99,235,0.04) !important"
+                          ? "rgba(37,99,235,0.08) !important"
                           : isDone
-                            ? "rgba(0,0,0,0.012)"
-                            : "white",
+                            ? "action.hover"
+                            : "background.paper",
                         opacity: isDone && !isSelected ? 0.65 : 1,
                         transition: "all 0.15s",
                         borderTop: idx === 0 ? "none" : "1px solid",

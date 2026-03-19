@@ -1,21 +1,16 @@
 import { useState, useMemo, useRef } from "react";
-import { Add, FilterList } from "@mui/icons-material";
 import {
   Alert,
-  Badge,
-  Button,
-  Chip,
   Container,
-  Paper,
   Snackbar,
-  Stack,
-  Tooltip,
 } from "@mui/material";
 import {
   getStatusCards,
   calculateDashboardStats,
   toggleSetItem,
   filterAndSortTasks,
+  getMaxPageAfterDelete,
+  getPageSelectionState,
 } from "../../utils";
 import StatusCard from "../../components/StatusCard";
 import {
@@ -24,22 +19,26 @@ import {
   type Priority,
   type Status,
 } from "../../types/dashboard";
-import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import { useTask } from "../../hooks/useTask";
 import FilterDialog from "../../components/FilterDialog";
 import TaskTable from "../../components/TaskTable";
+import AlertDialog from "../../components/AlertDialog";
+import DashboardToolbar from "../../components/DashboardToolbar";
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { tasks, loading } = useTask({ autoFetch: true });
+  const { tasks, loading, deleteTasks, deleteTaskLoading } = useTask({
+    autoFetch: true,
+  });
   const [snack, setSnack] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("dueDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   // ── Filter state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -101,11 +100,8 @@ const Dashboard = () => {
   };
 
   // ── Select-all
-  const pageIds = paginated.map((t) => t.id);
-  const allPageSelected =
-    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const somePageSelected =
-    pageIds.some((id) => selected.has(id)) && !allPageSelected;
+  const { pageIds, allPageSelected, somePageSelected } =
+    getPageSelectionState(paginated, selected);
 
   const handleSelectAll = () => {
     setSelected((prev) => {
@@ -133,16 +129,33 @@ const Dashboard = () => {
     navigate(`/edit/${id}`);
   };
 
-  const deleteSelected = () => {
-    // const count = selected.size;
-    // setTasks((prev) => {
-    //   const next = prev.filter((t) => !selected.has(t.id));
-    //   const maxPage = Math.max(0, Math.ceil(next.length / rowsPerPage) - 1);
-    //   if (page > maxPage) setPage(maxPage);
-    //   return next;
-    // });
-    // setSelected(new Set());
-    // setSnack(`${count} task${count !== 1 ? "s" : ""} deleted`);
+  const confirmDeleteSelected = () => {
+    if (selected.size === 0) return;
+    setOpenDeleteDialog(true);
+  };
+
+  const deleteSelected = async () => {
+    if (selected.size === 0) return;
+
+    const selectedIds = Array.from(selected);
+    const isDeleted = await deleteTasks(selectedIds);
+
+    if (!isDeleted) {
+      setSnack("Failed to delete tasks. Please try again.");
+      return;
+    }
+
+    const deletedCount = selectedIds.length;
+    setSelected(new Set());
+
+    const maxPage = getMaxPageAfterDelete(
+      sorted.length,
+      deletedCount,
+      rowsPerPage,
+    );
+    setPage((prev) => Math.min(prev, maxPage));
+
+    setSnack(`${deletedCount} task${deletedCount !== 1 ? "s" : ""} deleted`);
   };
 
   const { total, done, progress, highCount } = calculateDashboardStats(tasks);
@@ -155,146 +168,18 @@ const Dashboard = () => {
         totalProgress={progress}
       />
 
-      {/* ── Toolbar bar ── */}
-      <Paper
-        elevation={0}
-        sx={{
-          px: 1.5,
-          py: 1,
-          mb: 3,
-          border: "1.5px solid rgba(37,99,235,0.15)",
-          borderRadius: "14px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-          bgcolor: "white",
-        }}
-      >
-        {/* Left — filter button + active chips */}
-        <Stack
-          direction="row"
-          alignItems="center"
-          sx={{ flex: 1, flexWrap: "wrap", minWidth: 0, gap: 0.75 }}
-        >
-          <Tooltip title={filterOpen ? "Close filters" : "Open filters"}>
-            <Button
-              ref={filterBtnRef}
-              size="small"
-              onClick={() => setFilterOpen((o) => !o)}
-              startIcon={
-                <Badge
-                  badgeContent={activeFilterCount}
-                  color="primary"
-                  sx={{
-                    "& .MuiBadge-badge": {
-                      fontSize: "0.6rem",
-                      minWidth: 15,
-                      height: 15,
-                      p: 0,
-                    },
-                  }}
-                >
-                  <FilterList fontSize="small" />
-                </Badge>
-              }
-              sx={{
-                color:
-                  filterOpen || activeFilterCount > 0
-                    ? "primary.main"
-                    : "text.secondary",
-                bgcolor:
-                  filterOpen || activeFilterCount > 0
-                    ? "rgba(37,99,235,0.08)"
-                    : "transparent",
-                borderRadius: "8px",
-                flexShrink: 0,
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.82rem",
-                px: 1.2,
-                py: 0.6,
-                minWidth: 0,
-                "&:hover": {
-                  bgcolor: "rgba(37,99,235,0.08)",
-                  color: "primary.main",
-                },
-              }}
-            >
-              Filter
-            </Button>
-          </Tooltip>
-
-          {/* Active filter chips */}
-          {Array.from(filterPriority).map((p) => (
-            <Chip
-              key={p}
-              label={p}
-              size="small"
-              onDelete={() => togglePriority(p)}
-              sx={{
-                height: 24,
-                fontSize: "0.75rem",
-                bgcolor: PRIORITY_COLORS[p].bg,
-                color: PRIORITY_COLORS[p].color,
-                "& .MuiChip-deleteIcon": {
-                  fontSize: 14,
-                  color: PRIORITY_COLORS[p].color,
-                },
-              }}
-            />
-          ))}
-          {Array.from(filterStatus).map((s) => (
-            <Chip
-              key={s}
-              label={s}
-              size="small"
-              onDelete={() => toggleStatus(s)}
-              sx={{
-                height: 24,
-                fontSize: "0.75rem",
-                bgcolor: STATUS_COLORS[s].bg,
-                color: STATUS_COLORS[s].color,
-                "& .MuiChip-deleteIcon": {
-                  fontSize: 14,
-                  color: STATUS_COLORS[s].color,
-                },
-              }}
-            />
-          ))}
-          {activeFilterCount > 0 && (
-            <Chip
-              label="Clear all"
-              size="small"
-              onClick={clearAllFilters}
-              sx={{
-                height: 24,
-                fontSize: "0.75rem",
-                cursor: "pointer",
-                color: "text.secondary",
-                bgcolor: "transparent",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            />
-          )}
-        </Stack>
-
-        {/* Right — add button */}
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={addTask}
-          sx={{
-            borderRadius: "10px",
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-            fontSize: "0.85rem",
-          }}
-        >
-          Add Task
-        </Button>
-      </Paper>
+      <DashboardToolbar
+        filterOpen={filterOpen}
+        activeFilterCount={activeFilterCount}
+        filterPriority={filterPriority}
+        filterStatus={filterStatus}
+        filterBtnRef={filterBtnRef}
+        onToggleFilter={() => setFilterOpen((o) => !o)}
+        onTogglePriority={togglePriority}
+        onToggleStatus={toggleStatus}
+        onClearFilters={clearAllFilters}
+        onAddTask={addTask}
+      />
 
       {/* ── Filter dialog (Popper) ── */}
       <FilterDialog
@@ -321,7 +206,8 @@ const Dashboard = () => {
         sortKey={sortKey}
         sortDir={sortDir}
         page={page}
-        onDeleteSelected={deleteSelected}
+        deleteLoading={deleteTaskLoading}
+        onDeleteSelected={confirmDeleteSelected}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
         onSort={handleSort}
@@ -345,6 +231,21 @@ const Dashboard = () => {
           {snack}
         </Alert>
       </Snackbar>
+
+      <AlertDialog
+        open={openDeleteDialog}
+        content={`${selected.size} Task${selected.size !== 1 ? "s" : ""} will be deleted`}
+        variant="warning"
+        loading={deleteTaskLoading}
+        confirmButtonPosition="right"
+        leftButtonText={deleteTaskLoading ? "Deleting..." : "Delete"}
+        rightButtonText="Cancel"
+        onClose={() => setOpenDeleteDialog(false)}
+        onConfirm={async () => {
+          setOpenDeleteDialog(false);
+          await deleteSelected();
+        }}
+      />
     </Container>
   );
 };

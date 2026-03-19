@@ -110,6 +110,10 @@ export const taskApi = {
   // Delete a task
   delete: (id: number) => api.delete<ApiResponse<void>>(`/tasks/${id}`),
 
+  // Delete multiple tasks in one request
+  deleteBatch: (taskIds: number[]) =>
+    api.post<ApiResponse<void>>("/tasks/batch-delete", { taskIds }),
+
   // Delete an attachment
   deleteAttachment: (taskId: number, attachmentId: number) =>
     api.delete<ApiResponse<void>>(

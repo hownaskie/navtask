@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Stack,
@@ -22,6 +22,7 @@ import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import StatusChip from "../../components/StatusChip";
 import TaskProgressStatus from "../../components/TaskProgressStatus/TaskProgressStatus";
 import SectionLabel from "../../components/SectionLabel";
+import AlertDialog from "../../components/AlertDialog";
 import { useTask } from "../../hooks/useTask";
 import { getTaskProgressByStatus } from "../../utils";
 import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
@@ -46,13 +47,15 @@ type TaskDetails = {
 };
 
 const ViewTask = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
-  const { getTaskById } = useTask();
+  const { getTaskById, deleteTask, deleteTaskLoading } = useTask();
 
   const [task, setTask] = useState<TaskDetails | null>(null);
   const [subtasks, setSubtasks] = useState<TaskSubtaskView[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -107,6 +110,19 @@ const ViewTask = () => {
           : t,
       ),
     );
+
+  const handleConfirmDelete = async () => {
+    if (!task) return;
+
+    const isDeleted = await deleteTask(task.id);
+    if (isDeleted) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    setOpenDeleteDialog(false);
+    setError("Failed to delete task. Please try again.");
+  };
 
   const completed = subtasks.filter((t) => t.status === "Completed").length;
   const { completed: progressCompleted, total: progressTotal } =
@@ -192,7 +208,12 @@ const ViewTask = () => {
 
             <Stack direction="row" spacing={0.5}>
               <Tooltip title="Delete">
-                <IconButton size="small" sx={{ color: "text.secondary" }}>
+                <IconButton
+                  size="small"
+                  disabled={deleteTaskLoading}
+                  onClick={() => setOpenDeleteDialog(true)}
+                  sx={{ color: "text.secondary" }}
+                >
                   <DeleteOutlined fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -376,6 +397,20 @@ const ViewTask = () => {
           </Box>
         </Box>
       </Box>
+
+      <AlertDialog
+        open={openDeleteDialog}
+        variant="warning"
+        leftButtonText={deleteTaskLoading ? "Deleting..." : "Delete"}
+        rightButtonText="Cancel"
+        content="Are you sure you want to delete this task? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteTaskLoading) {
+            setOpenDeleteDialog(false);
+          }
+        }}
+      />
     </Container>
   );
 };

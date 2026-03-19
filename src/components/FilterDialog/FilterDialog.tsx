@@ -12,6 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import { type Priority, type Status } from "../../types/dashboard";
 import { PRIORITY_OPTIONS, STATUS_OPTIONS } from "../../constants/task";
@@ -37,10 +38,22 @@ const FilterDialog = ({
   onToggleStatus,
   onClear,
 }: FilterDialogProps) => {
+  const theme = useTheme();
   const hasFilters = selectedPriority.size > 0 || selectedStatus.size > 0;
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const priorityBtnRef = useRef<HTMLDivElement>(null);
   const statusBtnRef = useRef<HTMLDivElement>(null);
+
+  const sectionActiveBg = alpha(
+    theme.palette.primary.main,
+    theme.palette.mode === "dark" ? 0.24 : 0.08,
+  );
+
+  const getActiveRowBg = (dotColor: string) =>
+    alpha(dotColor, theme.palette.mode === "dark" ? 0.24 : 0.12);
+
+  const getActiveTextColor = (baseColor: string, dotColor: string) =>
+    theme.palette.mode === "dark" ? dotColor : baseColor;
 
   return (
     <Popper
@@ -112,10 +125,10 @@ const FilterDialog = ({
                 borderRadius: "8px",
                 bgcolor:
                   activeSubmenu === "priority"
-                    ? "rgba(37,99,235,0.08)"
+                    ? sectionActiveBg
                     : "transparent",
                 transition: "background 0.12s",
-                "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                "&:hover": { bgcolor: "action.hover" },
               }}
             >
               <Typography
@@ -144,10 +157,10 @@ const FilterDialog = ({
                 borderRadius: "8px",
                 bgcolor:
                   activeSubmenu === "status"
-                    ? "rgba(37,99,235,0.08)"
+                    ? sectionActiveBg
                     : "transparent",
                 transition: "background 0.12s",
-                "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                "&:hover": { bgcolor: "action.hover" },
               }}
             >
               <Typography
@@ -194,10 +207,10 @@ const FilterDialog = ({
                         px: 2,
                         py: 0.75,
                         cursor: "pointer",
-                        bgcolor: active ? style.bg : "transparent",
+                        bgcolor: active ? getActiveRowBg(style.dot) : "transparent",
                         transition: "background 0.12s",
                         "&:hover": {
-                          bgcolor: active ? style.bg : "rgba(0,0,0,0.04)",
+                          bgcolor: active ? getActiveRowBg(style.dot) : "action.hover",
                         },
                       }}
                     >
@@ -214,14 +227,21 @@ const FilterDialog = ({
                         <Typography
                           fontSize="0.85rem"
                           fontWeight={active ? 600 : 400}
-                          color={active ? style.color : "text.primary"}
+                          color={
+                            active
+                              ? getActiveTextColor(style.color, style.dot)
+                              : "text.primary"
+                          }
                         >
                           {p}
                         </Typography>
                       </Stack>
                       {active && (
                         <CheckRounded
-                          sx={{ fontSize: 16, color: style.color }}
+                          sx={{
+                            fontSize: 16,
+                            color: getActiveTextColor(style.color, style.dot),
+                          }}
                         />
                       )}
                     </Stack>
@@ -264,10 +284,10 @@ const FilterDialog = ({
                         px: 2,
                         py: 0.75,
                         cursor: "pointer",
-                        bgcolor: active ? style.bg : "transparent",
+                        bgcolor: active ? getActiveRowBg(style.dot) : "transparent",
                         transition: "background 0.12s",
                         "&:hover": {
-                          bgcolor: active ? style.bg : "rgba(0,0,0,0.04)",
+                          bgcolor: active ? getActiveRowBg(style.dot) : "action.hover",
                         },
                       }}
                     >
@@ -284,14 +304,21 @@ const FilterDialog = ({
                         <Typography
                           fontSize="0.85rem"
                           fontWeight={active ? 600 : 400}
-                          color={active ? style.color : "text.primary"}
+                          color={
+                            active
+                              ? getActiveTextColor(style.color, style.dot)
+                              : "text.primary"
+                          }
                         >
                           {s}
                         </Typography>
                       </Stack>
                       {active && (
                         <CheckRounded
-                          sx={{ fontSize: 16, color: style.color }}
+                          sx={{
+                            fontSize: 16,
+                            color: getActiveTextColor(style.color, style.dot),
+                          }}
                         />
                       )}
                     </Stack>

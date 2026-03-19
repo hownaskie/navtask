@@ -10,3 +10,4 @@ export * from "./status";
 export * from "./theme";
 export * from "./validation";
 export * from "./taskProgress";
+export * from "./pagination";

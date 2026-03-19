@@ -24,7 +24,7 @@ const StatusCard = ({ card, totalProgress }: StatusCardProps) => {
             borderRadius: "14px",
             border: "1.5px solid",
             borderColor: "divider",
-            bgcolor: "white",
+            bgcolor: "background.paper",
           }}
         >
           <Typography

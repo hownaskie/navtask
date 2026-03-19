@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
 import { ArrowBackIos, TaskAlt } from "@mui/icons-material";
 import { useAuth } from "../../context/useAuthContext";
 import { Sidebar, MobileMenuButton, SIDEBAR_WIDTH } from "../Sidebar";
+import { getTheme } from "../../utils/theme";
 
 /**
  * Shared layout for all protected routes.
@@ -34,8 +36,9 @@ const ProtectedLayout = () => {
     location.pathname.startsWith("/edit");
 
   return (
-    // height:100vh + overflow:hidden gives the flex children a real fixed height
-    // so the content area can actually scroll with overflow:auto
+    <ThemeProvider theme={getTheme(darkMode ? "dark" : "light")}>
+    {/* height:100vh + overflow:hidden gives the flex children a real fixed height
+        so the content area can actually scroll with overflow:auto */}
     <Box
       sx={{
         display: "flex",
@@ -161,6 +164,7 @@ const ProtectedLayout = () => {
         </Box>
       </Box>
     </Box>
+    </ThemeProvider>
   );
 };
 

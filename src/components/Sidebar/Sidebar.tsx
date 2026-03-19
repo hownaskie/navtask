@@ -126,9 +126,9 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
               fontWeight: 700,
               fontSize: "1rem",
             }}
-            src={AvatarUrl({ seed: user?.username })}
+            src={AvatarUrl({ seed: user?.firstName +" "+ user?.lastName || "user" })}
           >
-            {user?.username?.charAt(0).toUpperCase()}
+            {user?.firstName?.charAt(0).toUpperCase() || "U"}
           </Avatar>
           <Box sx={{ minWidth: 0 }}>
             <Typography
@@ -137,7 +137,7 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
               noWrap
               sx={{ fontFamily: "'Outfit', sans-serif" }}
             >
-              {user?.username}
+              {user?.firstName +" "+ user?.lastName || "User"}
             </Typography>
           </Box>
         </Stack>
@@ -338,7 +338,8 @@ const Sidebar = ({
         "& .MuiDrawer-paper": {
           width: SIDEBAR_WIDTH,
           boxSizing: "border-box",
-          border: "none",
+          borderRight: "1px solid",
+          borderColor: "divider",
           boxShadow: "2px 0 16px rgba(0,0,0,0.06)",
         },
       }}
@@ -357,7 +358,8 @@ const Sidebar = ({
         "& .MuiDrawer-paper": {
           width: SIDEBAR_WIDTH,
           boxSizing: "border-box",
-          border: "none",
+          borderRight: "1px solid",
+          borderColor: "divider",
           boxShadow: "4px 0 24px rgba(0,0,0,0.12)",
         },
       }}

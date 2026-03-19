@@ -15,6 +15,7 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
   const [loading, setLoading] = useState<boolean>(autoFetch);
   const [createTaskLoading, setCreateTaskLoading] = useState<boolean>(false);
   const [updateTaskLoading, setUpdateTaskLoading] = useState<boolean>(false);
+  const [deleteTaskLoading, setDeleteTaskLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!autoFetch) {
@@ -72,6 +73,39 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     }
   };
 
+  const deleteTask = async (id: number) => {
+    try {
+      setDeleteTaskLoading(true);
+      await taskApi.delete(id);
+      setTasks((prev) => prev.filter((task) => task.id !== id));
+      return true;
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      return false;
+    } finally {
+      setDeleteTaskLoading(false);
+    }
+  };
+
+  const deleteTasks = async (taskIds: number[]) => {
+    if (taskIds.length === 0) {
+      return true;
+    }
+
+    try {
+      setDeleteTaskLoading(true);
+      await taskApi.deleteBatch(taskIds);
+      const ids = new Set(taskIds);
+      setTasks((prev) => prev.filter((task) => !ids.has(task.id)));
+      return true;
+    } catch (err) {
+      console.error("Error deleting tasks:", err);
+      return false;
+    } finally {
+      setDeleteTaskLoading(false);
+    }
+  };
+
   return {
     tasks,
     loading,
@@ -79,6 +113,9 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     createTaskLoading,
     updateTask,
     updateTaskLoading,
+    deleteTask,
+    deleteTasks,
+    deleteTaskLoading,
     getTaskById,
   };
 };
