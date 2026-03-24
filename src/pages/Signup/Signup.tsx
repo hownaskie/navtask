@@ -5,22 +5,20 @@ import {
   Stack,
   Typography,
   TextField,
-  Alert,
   Button,
   LinearProgress,
 } from "@mui/material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
+import AlertMessage from "../../components/AlertMessage";
 import { useState } from "react";
 import { useAuth } from "../../context/useAuthContext";
-import { useNavigate } from "react-router-dom";
 import {
   validateUsername,
 } from "../../utils";
 import { authApi } from "../../services/api";
 
 const Signup = () => {
-  const navigate = useNavigate();
   const { register } = useAuth();
 
   const [username, setUsername] = useState("");
@@ -29,6 +27,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const normalizedPassword = password.toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
@@ -71,6 +70,7 @@ const Signup = () => {
     setUsernameTouched(true);
     setPasswordTouched(true);
     setError("");
+    setSuccessMessage("");
     if (!canSubmit) {
       return setError("Please satisfy all password requirements");
     }
@@ -78,7 +78,9 @@ const Signup = () => {
     try {
       setLoading(true);
       await register(username.trim(), password);
-      navigate("/dashboard");
+      setSuccessMessage("Account created successfully. Please sign in to continue.");
+      setPassword("");
+      setPasswordTouched(false);
     } catch {
       setError("Unable to create account. Please check your details.");
     } finally {
@@ -254,11 +256,7 @@ const Signup = () => {
                 </Stack>
               </Stack>
 
-              {error && (
-                <Alert severity="error" sx={{ borderRadius: 2, py: 0.5 }}>
-                  {error}
-                </Alert>
-              )}
+              <AlertMessage error={error} success={successMessage} />
               <Button
                 variant="contained"
                 fullWidth

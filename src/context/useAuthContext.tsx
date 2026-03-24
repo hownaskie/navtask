@@ -6,9 +6,10 @@ import {
   useCallback,
   type ReactNode
 } from 'react'
+import { isAxiosError } from 'axios'
 import { authApi } from '../services/api'
 import { clearToken } from '../utils/tokenStorage'
-import type { User } from '../interfaces/auth'
+import type { ApiResponse, User } from '../interfaces/auth'
 
 interface AuthContextValue {
   user: User | null
@@ -41,11 +42,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { loadUser() }, [loadUser])
 
   const login = async (username: string, password: string): Promise<User> => {
-    const res = await authApi.login({ username, password })
-    const { token, user } = res.data.data
-    localStorage.setItem('navtask_token', token)
-    setUser(user)
-    return user
+    try {
+      const res = await authApi.login({ username, password })
+      const { token, user } = res.data.data
+      localStorage.setItem('navtask_token', token)
+      setUser(user)
+      return user
+    } catch (error) {
+      if (isAxiosError<ApiResponse<unknown>>(error)) {
+        const message = error.response?.data?.message
+        throw new Error(message || 'Unable to sign in. Please check your credentials.')
+      }
+
+      throw new Error('Unable to sign in. Please check your credentials.')
+    }
   }
 
   const register = async (
@@ -71,9 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: normalized,
       password,
     })
-    const { token, user } = res.data.data
-    localStorage.setItem('navtask_token', token)
-    setUser(user)
+    const { user } = res.data.data
     return user
   }
 

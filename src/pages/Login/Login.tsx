@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Button,
   Fade,
@@ -14,6 +13,7 @@ import { useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
+import AlertMessage from "../../components/AlertMessage";
 import { useAuth } from "../../context/useAuthContext";
 import { validateLogin } from "../../utils";
 import { authApi } from "../../services/api";
@@ -32,16 +32,25 @@ const Login = () => {
   const handleGoogle = () => authApi.googleLogin();
   const handleFacebook = () => authApi.facebookLogin();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
     const error = validateLogin(username, password);
     if (error) return setError(error);
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      login(username, password);
+    try {
+      await login(username, password);
       navigate("/dashboard");
-    }, 900);
+    } catch (error) {
+      console.log(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in. Please check your credentials.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,11 +162,7 @@ const Login = () => {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
-              {error && (
-                <Alert severity="error" sx={{ borderRadius: 2, py: 0.5 }}>
-                  {error}
-                </Alert>
-              )}
+              <AlertMessage error={error} />
               <Button
                 variant="contained"
                 fullWidth
