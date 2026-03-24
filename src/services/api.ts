@@ -64,7 +64,7 @@ export const userApi = {
 
 export const taskApi = {
   // Create a new task with optional file attachments
-  create: (data: CreateTaskRequest, images?: FileList) => {
+  create: (data: CreateTaskRequest, images?: File[] | FileList) => {
     const formData = new FormData();
     formData.append(
       "task",

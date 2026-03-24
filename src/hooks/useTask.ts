@@ -36,12 +36,13 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     fetchTasks();
   }, [autoFetch]);
 
-  const createTask = async (taskData: CreateTaskRequest) => {
+  const createTask = async (taskData: CreateTaskRequest, images?: File[]) => {
     try {
       setCreateTaskLoading(true);
-      await taskApi.create(taskData);
+      await taskApi.create(taskData, images);
     } catch (err) {
       console.error("Error creating task:", err);
+      throw err;
     } finally {
       setCreateTaskLoading(false);
     }

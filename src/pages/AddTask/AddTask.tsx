@@ -8,6 +8,7 @@ import {
   DeleteOutline,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -18,6 +19,7 @@ import {
   InputLabel,
   MenuItem,
   OutlinedInput,
+  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -38,6 +40,7 @@ interface Attachment {
   id: number;
   name: string;
   size: string;
+  file: File;
 }
 
 // ── Section label ─────────────────────────────────────────────────────────────
@@ -73,6 +76,7 @@ const AddTask = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [errorSnackbar, setErrorSnackbar] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
 
   // ── Subtask handlers
@@ -97,6 +101,7 @@ const AddTask = () => {
         f.size > 1024 * 1024
           ? `${(f.size / 1024 / 1024).toFixed(1)} MB`
           : `${(f.size / 1024).toFixed(0)} KB`,
+      file: f,
     }));
     setAttachments((prev) => [...prev, ...newAttachments]);
   };
@@ -105,19 +110,25 @@ const AddTask = () => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   // ── Submit
-  const handleSave = () => {
+  const handleSave = async () => {
     if (user?.id) {
-      createTask({
-        title: title.trim(),
-        details: details.trim() || undefined,
-        priority: priority?.toUpperCase() as TaskPriority,
-        status: status?.toUpperCase() as TaskStatus,
-        dueDate: dueDate || undefined,
-        subtasks: subtasks
-          .filter((s) => s.title.trim())
-          .map((s) => ({ name: s.title.trim(), status: "NOT_STARTED" })),
-        userId: user?.id,
-      }).finally(() => navigate("/dashboard"));
+      const imageFiles = attachments.map((attachment) => attachment.file);
+      try {
+        await createTask({
+          title: title.trim(),
+          details: details.trim() || undefined,
+          priority: priority?.toUpperCase() as TaskPriority,
+          status: status?.toUpperCase() as TaskStatus,
+          dueDate: dueDate || undefined,
+          subtasks: subtasks
+            .filter((s) => s.title.trim())
+            .map((s) => ({ name: s.title.trim(), status: "NOT_STARTED" })),
+          userId: user?.id,
+        }, imageFiles.length > 0 ? imageFiles : undefined);
+        navigate("/dashboard");
+      } catch {
+        setErrorSnackbar("Failed to save task. Please try again.");
+      }
     }
   };
 
@@ -624,6 +635,20 @@ const AddTask = () => {
           {createTaskLoading ? "Saving..." : "Save Task"}
         </Button>
       </Box>
+      <Snackbar
+        open={errorSnackbar !== null}
+        autoHideDuration={5000}
+        onClose={() => setErrorSnackbar(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorSnackbar(null)}
+          sx={{ width: "100%" }}
+        >
+          {errorSnackbar}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

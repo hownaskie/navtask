@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'http://localhost:8080', // your Spring Boot port
         changeOrigin: true,
         rewrite: (path) => path,
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path,
       }
     }
   }

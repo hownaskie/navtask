@@ -23,6 +23,7 @@ import StatusChip from "../../components/StatusChip";
 import TaskProgressStatus from "../../components/TaskProgressStatus/TaskProgressStatus";
 import SectionLabel from "../../components/SectionLabel";
 import AlertDialog from "../../components/AlertDialog";
+import AttachmentCard from "../../components/AttachmentCard";
 import { useTask } from "../../hooks/useTask";
 import { getTaskProgressByStatus } from "../../utils";
 import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
@@ -44,6 +45,7 @@ type TaskDetails = {
   dueDate: string | null;
   priority: Priority;
   status: Exclude<Status, "All">;
+  attachments: { id: number; attachmentUrl: string }[];
 };
 
 const ViewTask = () => {
@@ -83,6 +85,7 @@ const ViewTask = () => {
         dueDate: data.dueDate,
         priority: priorityLabelMap[data.priority],
         status: statusLabelMap[data.status],
+        attachments: data.attachments,
       });
 
       setSubtasks(
@@ -135,6 +138,43 @@ const ViewTask = () => {
     progressTotal > 0
       ? Math.round((progressCompleted / progressTotal) * 100)
       : 0;
+
+  const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN?.replace(/\/$/, "") ?? "";
+
+  const getAttachmentName = (url: string, fallbackId: number) => {
+    const rawName = url.split("/").pop();
+    return rawName ? decodeURIComponent(rawName) : `attachment-${fallbackId}`;
+  };
+
+  const getAttachmentExtension = (url: string) => {
+    const sanitizedUrl = url.split("?")[0].split("#")[0];
+    const extension = sanitizedUrl.split(".").pop();
+    return extension?.toLowerCase() ?? "";
+  };
+
+  const getAttachmentType = (url: string) => {
+    const ext = getAttachmentExtension(url);
+
+    if (["png", "jpg", "jpeg", "webp"].includes(ext)) return "image";
+    if (ext === "pdf") return "pdf";
+    if (["doc", "docx"].includes(ext)) return "doc";
+    if (["xls", "xlsx", "csv"].includes(ext)) return "sheet";
+    if (["ppt", "pptx"].includes(ext)) return "slide";
+
+    return "file";
+  };
+
+  const getAttachmentUrl = (url: string) => {
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+
+    if (backendOrigin && url.startsWith("/")) {
+      return `${backendOrigin}${url}`;
+    }
+
+    return url;
+  };
 
   if (loading) {
     return (
@@ -304,6 +344,31 @@ const ViewTask = () => {
               {task.details}
             </Typography>
           </Box>
+
+          {task.attachments.length > 0 && (
+            <Box mb={3}>
+              <SectionLabel>Attachments</SectionLabel>
+              <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                {task.attachments.map((attachment) => {
+                  const fileName = getAttachmentName(
+                    attachment.attachmentUrl,
+                    attachment.id,
+                  );
+                  const attachmentUrl = getAttachmentUrl(attachment.attachmentUrl);
+                  const attachmentType = getAttachmentType(attachment.attachmentUrl);
+
+                  return (
+                    <AttachmentCard
+                      key={attachment.id}
+                      fileName={fileName}
+                      attachmentUrl={attachmentUrl}
+                      attachmentType={attachmentType}
+                    />
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
 
           <Divider sx={{ mb: 3, borderColor: "divider" }} />
 

@@ -8,8 +8,10 @@ import {
   DeleteOutline,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
   FormControl,
@@ -17,11 +19,11 @@ import {
   InputLabel,
   MenuItem,
   OutlinedInput,
+  Snackbar,
   Stack,
   TextField,
   Tooltip,
   Typography,
-  CircularProgress,
 } from "@mui/material";
 import type { Priority, Status } from "../../types/dashboard";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
@@ -89,6 +91,7 @@ const EditTask = () => {
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveErrorSnackbar, setSaveErrorSnackbar] = useState<string | null>(null);
   const [initialSubtaskIds, setInitialSubtaskIds] = useState<Set<number>>(
     new Set(),
   );
@@ -219,7 +222,7 @@ const EditTask = () => {
     });
 
     if (!success) {
-      setError("Failed to update task. Please try again.");
+      setSaveErrorSnackbar("Failed to save task. Please try again.");
       return;
     }
 
@@ -771,6 +774,20 @@ const EditTask = () => {
           {updateTaskLoading ? "Saving..." : "Save Task"}
         </Button>
       </Box>
+      <Snackbar
+        open={saveErrorSnackbar !== null}
+        autoHideDuration={5000}
+        onClose={() => setSaveErrorSnackbar(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setSaveErrorSnackbar(null)}
+          sx={{ width: "100%" }}
+        >
+          {saveErrorSnackbar}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
