@@ -1,4 +1,65 @@
 import type { User } from "../interfaces/auth";
+import type { TaskPriority, TaskStatus } from "../types/auth";
+
+export const TITLE_MAX_LENGTH = 25;
+export const DETAILS_MAX_LENGTH = 300;
+
+export const getTodayDateString = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+export const getMinDueDateString = (): string => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const year = tomorrow.getFullYear();
+  const month = `${tomorrow.getMonth() + 1}`.padStart(2, "0");
+  const day = `${tomorrow.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+export const isDueDateAfterToday = (dueDate: string): boolean => {
+  if (!dueDate) {
+    return false;
+  }
+
+  return dueDate > getTodayDateString();
+};
+
+export const validateAddTaskForm = ({
+  title,
+  details,
+  priority,
+  status,
+}: {
+  title: string;
+  details: string;
+  priority: TaskPriority | "";
+  status: TaskStatus | "";
+}): string | null => {
+  const trimmedTitle = title.trim();
+  const trimmedDetails = details.trim();
+
+  if (trimmedTitle.length > TITLE_MAX_LENGTH) {
+    return `Title can be up to ${TITLE_MAX_LENGTH} characters only.`;
+  }
+
+  if (trimmedDetails.length > DETAILS_MAX_LENGTH) {
+    return `Details can be up to ${DETAILS_MAX_LENGTH} characters only.`;
+  }
+
+  if (!priority || !status) {
+    return "Please select both priority and status.";
+  }
+
+  return null;
+};
 
 export const validateEmail = (email: string): string | null => {
   if (!email) return "Email is required.";
@@ -16,6 +77,8 @@ export const validatePassword = (password: string): string | null => {
 
 export const validateUsername = (username: string): string | null => {
   if (!username) return "Username is required.";
+  if (!/^[A-Za-z0-9 !#()_-]+$/.test(username))
+    return "Username may only contain letters, numbers, spaces, and ! # ( ) _ -";
   return null;
 };
 

@@ -32,8 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.me()
       setUser(res.data.data)
-    } catch {
-      clearToken()
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 401) {
+        clearToken()
+      }
     } finally {
       setLoading(false)
     }

@@ -5,5 +5,5 @@ export type Status =
   | "In Progress"
   | "Completed"
   | "Cancelled";
-export type SortKey = "title" | "dueDate" | "priority" | "status";
+export type SortKey = "dueDate" | "priority" | "status";
 export type SortDir = "asc" | "desc";

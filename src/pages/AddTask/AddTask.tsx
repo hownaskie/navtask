@@ -19,6 +19,7 @@ import {
   InputLabel,
   MenuItem,
   OutlinedInput,
+  FormHelperText,
   Snackbar,
   Stack,
   TextField,
@@ -30,6 +31,18 @@ import { useTask } from "../../hooks/useTask";
 import type { Priority, Status } from "../../types/dashboard";
 import type { TaskStatus, TaskPriority } from "../../types/auth";
 import { useAuth } from "../../context/useAuthContext";
+import AlertDialog from "../../components/AlertDialog";
+import {
+  MAX_ATTACHMENT_ITEMS,
+  MAX_SUBTASK_ITEMS,
+} from "../../constants/taskForm";
+import {
+  validateAddTaskForm,
+  TITLE_MAX_LENGTH,
+  DETAILS_MAX_LENGTH,
+  getMinDueDateString,
+  isDueDateAfterToday,
+} from "../../utils";
 
 interface Subtask {
   id: number;
@@ -67,34 +80,111 @@ const AddTask = () => {
   const { createTask, createTaskLoading } = useTask();
 
   // ── Form state
-  const [priority, setPriority] = useState<string | null>("");
-  const [status, setStatus] = useState<string | null>("");
+  const [priority, setPriority] = useState<TaskPriority | "">("");
+  const [status, setStatus] = useState<TaskStatus | "">("");
   const [title, setTitle] = useState("");
-  const [dateCreated, setDateCreated] = useState("");
+  const [dateCreated] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState("");
   const [details, setDetails] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [errorSnackbar, setErrorSnackbar] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const [pendingDeleteSubtaskId, setPendingDeleteSubtaskId] = useState<number | null>(null);
+  const [titleHadValue, setTitleHadValue] = useState(false);
+  const [dueDateHadValue, setDueDateHadValue] = useState(false);
+  const [touchedSubtaskIds, setTouchedSubtaskIds] = useState<Set<number>>(new Set());
+  const [subtaskValidationTriggered, setSubtaskValidationTriggered] = useState(false);
+  const minDueDate = getMinDueDateString();
+  const isTitleEmptyAfterInput = titleHadValue && !title.trim();
+  const isDueDateEmptyAfterInput = dueDateHadValue && !dueDate;
+  const hasInvalidTouchedSubtask = subtasks.some(
+    (subtask) =>
+      (subtaskValidationTriggered || touchedSubtaskIds.has(subtask.id)) &&
+      !subtask.title.trim(),
+  );
+  const isSaveDisabled =
+    !priority ||
+    !status ||
+    !title.trim() ||
+    !isDueDateAfterToday(dueDate) ||
+    !details.trim() ||
+    hasInvalidTouchedSubtask ||
+    createTaskLoading;
 
   // ── Subtask handlers
-  const addSubtask = () =>
-    setSubtasks((prev) => [...prev, { id: Date.now(), title: "" }]);
+  const addSubtask = () => {
+    if (status === "COMPLETED") {
+      setErrorSnackbar("You cannot add subtasks when the task status is completed.");
+      return;
+    }
 
-  const updateSubtask = (id: number, value: string) =>
+    if (subtasks.length >= MAX_SUBTASK_ITEMS) {
+      setErrorSnackbar(`You can only add up to ${MAX_SUBTASK_ITEMS} subtasks.`);
+      return;
+    }
+
+    setSubtasks((prev) => [...prev, { id: Date.now(), title: "" }]);
+  };
+
+  const updateSubtask = (id: number, value: string) => {
+    setTouchedSubtaskIds((prev) => new Set(prev).add(id));
     setSubtasks((prev) =>
       prev.map((s) => (s.id === id ? { ...s, title: value } : s)),
     );
+  };
 
-  const removeSubtask = (id: number) =>
+  const removeSubtask = (id: number) => {
     setSubtasks((prev) => prev.filter((s) => s.id !== id));
+    setTouchedSubtaskIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const isSubtaskTitleInvalid = (id: number, titleValue: string) =>
+    (subtaskValidationTriggered || touchedSubtaskIds.has(id)) && !titleValue.trim();
+
+  const requestRemoveSubtask = (id: number) => {
+    setPendingDeleteSubtaskId(id);
+  };
+
+  const confirmRemoveSubtask = () => {
+    if (pendingDeleteSubtaskId === null) {
+      return;
+    }
+
+    removeSubtask(pendingDeleteSubtaskId);
+    setPendingDeleteSubtaskId(null);
+  };
 
   // ── Attachment handlers
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const newAttachments: Attachment[] = Array.from(files).map((f) => ({
+    const remainingSlots = MAX_ATTACHMENT_ITEMS - attachments.length;
+
+    if (remainingSlots <= 0) {
+      setErrorSnackbar(`You can upload up to ${MAX_ATTACHMENT_ITEMS} files only.`);
+      return;
+    }
+
+    const selectedFiles = Array.from(files);
+    const nonImages = selectedFiles.filter((f) => !f.type.startsWith("image/"));
+    if (nonImages.length > 0) {
+      setErrorSnackbar("Only image files are supported.");
+      return;
+    }
+
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+
+    if (selectedFiles.length > remainingSlots) {
+      setErrorSnackbar(
+        `You can upload up to ${MAX_ATTACHMENT_ITEMS} files only. Extra files were not added.`,
+      );
+    }
+
+    const newAttachments: Attachment[] = filesToAdd.map((f) => ({
       id: Date.now() + Math.random(),
       name: f.name,
       size:
@@ -111,18 +201,69 @@ const AddTask = () => {
 
   // ── Submit
   const handleSave = async () => {
+    const trimmedTitle = title.trim();
+    const trimmedDetails = details.trim();
+
+    const validationError = validateAddTaskForm({
+      title,
+      details,
+      priority,
+      status,
+    });
+
+    if (validationError) {
+      setErrorSnackbar(validationError);
+      return;
+    }
+
+    if (!trimmedDetails) {
+      setErrorSnackbar("Priority, status, title, due date, and description are required.");
+      return;
+    }
+
+    if (!isDueDateAfterToday(dueDate)) {
+      setErrorSnackbar("must be later than Date Created");
+      return;
+    }
+
+    if (subtasks.length > MAX_SUBTASK_ITEMS) {
+      setErrorSnackbar(`You can only add up to ${MAX_SUBTASK_ITEMS} subtasks.`);
+      return;
+    }
+
+    const normalizedSubtasks = subtasks.map((subtask) => ({
+      ...subtask,
+      title: subtask.title.trim(),
+    }));
+
+    const emptySubtaskIds = normalizedSubtasks
+      .filter((subtask) => !subtask.title)
+      .map((subtask) => subtask.id);
+
+    if (emptySubtaskIds.length > 0) {
+      setSubtaskValidationTriggered(true);
+      setTouchedSubtaskIds((prev) => {
+        const next = new Set(prev);
+        emptySubtaskIds.forEach((subtaskId) => next.add(subtaskId));
+        return next;
+      });
+      setErrorSnackbar("Subtask title cannot be empty.");
+      return;
+    }
+
     if (user?.id) {
       const imageFiles = attachments.map((attachment) => attachment.file);
       try {
         await createTask({
-          title: title.trim(),
-          details: details.trim() || undefined,
-          priority: priority?.toUpperCase() as TaskPriority,
-          status: status?.toUpperCase() as TaskStatus,
+          title: trimmedTitle,
+          details: trimmedDetails || undefined,
+          priority: priority as TaskPriority,
+          status: status as TaskStatus,
           dueDate: dueDate || undefined,
-          subtasks: subtasks
-            .filter((s) => s.title.trim())
-            .map((s) => ({ name: s.title.trim(), status: "NOT_STARTED" })),
+          subtasks: normalizedSubtasks.map((subtask) => ({
+            name: subtask.title,
+            status: "NOT_STARTED",
+          })),
           userId: user?.id,
         }, imageFiles.length > 0 ? imageFiles : undefined);
         navigate("/dashboard");
@@ -138,22 +279,22 @@ const AddTask = () => {
   const inputSx = {
     "& .MuiOutlinedInput-root": {
       borderRadius: "10px",
-      bgcolor: "white",
+      bgcolor: "background.paper",
       fontSize: "0.9rem",
     },
   };
 
   return (
     <Container
-      sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, sm: 4 } }}
+      sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
     >
       <Box sx={{ mx: "auto" }}>
         <Box
           sx={{
-            bgcolor: "white",
+            bgcolor: "background.paper",
             borderRadius: "16px",
             border: "1px solid",
-            borderColor: "rgba(37,99,235,0.12)",
+            borderColor: "divider",
             p: { xs: 2.5, sm: 3.5 },
           }}
         >
@@ -169,7 +310,7 @@ const AddTask = () => {
                 label="Select priority"
                 size="small"
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 slotProps={{
                   inputLabel: {
                     shrink: true,
@@ -209,7 +350,7 @@ const AddTask = () => {
                 label="Select status"
                 size="small"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as Status)}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
                 slotProps={{
                   inputLabel: {
                     shrink: true,
@@ -247,7 +388,7 @@ const AddTask = () => {
 
             {/* ── Title ── */}
             <Box>
-              <FormControl fullWidth variant="outlined">
+              <FormControl fullWidth variant="outlined" error={isTitleEmptyAfterInput}>
                 <InputLabel shrink>Title</InputLabel>
                 <OutlinedInput
                   multiline
@@ -255,9 +396,25 @@ const AddTask = () => {
                   label="Title"
                   notched
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  inputProps={{ maxLength: TITLE_MAX_LENGTH }}
+                  onChange={(e) => {
+                    const nextValue = e.target.value.slice(0, TITLE_MAX_LENGTH);
+                    if (nextValue.trim()) {
+                      setTitleHadValue(true);
+                    }
+                    setTitle(nextValue);
+                  }}
                 />
               </FormControl>
+              {isTitleEmptyAfterInput && (
+                <FormHelperText error>must not be empty</FormHelperText>
+              )}
+              <Typography
+                variant="caption"
+                sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
+              >
+                {title.length}/{TITLE_MAX_LENGTH}
+              </Typography>
             </Box>
 
             {/* ── Row 2: Date Created + Due Date ── */}
@@ -269,10 +426,10 @@ const AddTask = () => {
                   size="small"
                   label="Date Created"
                   value={dateCreated}
-                  onChange={(e) => setDateCreated(e.target.value)}
+                  disabled
                   slotProps={{
                     htmlInput: {
-                      min: today,
+                      readOnly: true,
                     },
                     input: {
                       startAdornment: (
@@ -284,8 +441,6 @@ const AddTask = () => {
                           }}
                         />
                       ),
-                      onClick: (e) =>
-                        (e.target as HTMLInputElement).showPicker(),
                     },
                     inputLabel: {
                       shrink: true,
@@ -302,10 +457,18 @@ const AddTask = () => {
                   size="small"
                   label="Due Date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    if (nextValue) {
+                      setDueDateHadValue(true);
+                    }
+                    setDueDate(nextValue);
+                  }}
+                  error={isDueDateEmptyAfterInput}
+                  helperText={isDueDateEmptyAfterInput ? "must be later than Date Created" : " "}
                   slotProps={{
                     htmlInput: {
-                      min: today,
+                      min: minDueDate,
                     },
                     input: {
                       startAdornment: (
@@ -332,16 +495,25 @@ const AddTask = () => {
             {/* ── Details ── */}
             <Box>
               <FormControl fullWidth variant="outlined">
-                <InputLabel shrink>Details (optional)</InputLabel>
+                <InputLabel shrink>Details</InputLabel>
                 <OutlinedInput
                   multiline
                   minRows={5}
-                  label="Details (optional)"
+                  label="Details"
                   notched
                   value={details}
-                  onChange={(e) => setDetails(e.target.value)}
+                  inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
+                  onChange={(e) =>
+                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH))
+                  }
                 />
               </FormControl>
+              <Typography
+                variant="caption"
+                sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
+              >
+                {details.length}/{DETAILS_MAX_LENGTH}
+              </Typography>
             </Box>
 
             {/* ── Attachments ── */}
@@ -363,9 +535,9 @@ const AddTask = () => {
                   border: "2px dashed",
                   borderColor: dragOver
                     ? "primary.main"
-                    : "rgba(37,99,235,0.2)",
+                    : "divider",
                   borderRadius: "12px",
-                  bgcolor: dragOver ? "rgba(37,99,235,0.04)" : "white",
+                  bgcolor: dragOver ? "action.hover" : "background.paper",
                   py: 3,
                   px: 1,
                   textAlign: "center",
@@ -373,7 +545,7 @@ const AddTask = () => {
                   transition: "all 0.15s",
                   "&:hover": {
                     borderColor: "primary.main",
-                    bgcolor: "rgba(37,99,235,0.04)",
+                    bgcolor: "action.hover",
                   },
                   pt: 1,
                   pb: 2,
@@ -422,16 +594,21 @@ const AddTask = () => {
                   display="block"
                   mt={0.5}
                 >
-                  Any file type · Max 10 MB each
+                  Images only · Up to {MAX_ATTACHMENT_ITEMS} files · Max 10 MB each
                 </Typography>
                 <input
                   id="file-upload"
                   type="file"
                   multiple
                   hidden
+                  accept="image/*"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
               </Box>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                {attachments.length}/{MAX_ATTACHMENT_ITEMS}
+              </Typography>
 
               {/* Attached file list */}
               {attachments.length > 0 && (
@@ -448,7 +625,7 @@ const AddTask = () => {
                         borderRadius: "10px",
                         border: "1px solid",
                         borderColor: "divider",
-                        bgcolor: "white",
+                        bgcolor: "background.paper",
                       }}
                     >
                       <Stack direction="row" alignItems="center" spacing={1.2}>
@@ -504,21 +681,26 @@ const AddTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "COMPLETED"}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",
                     fontWeight: 600,
                     fontSize: "0.8rem",
                     color: "primary.main",
-                    bgcolor: "rgba(37,99,235,0.06)",
+                    bgcolor: "action.hover",
                     px: 1.5,
                     py: 0.5,
-                    "&:hover": { bgcolor: "rgba(37,99,235,0.12)" },
+                    "&:hover": { bgcolor: "action.selected" },
                   }}
                 >
                   New Subtask
                 </Button>
               </Stack>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                {subtasks.length}/{MAX_SUBTASK_ITEMS}
+              </Typography>
 
               {subtasks.length === 0 ? (
                 <Box
@@ -528,7 +710,7 @@ const AddTask = () => {
                     borderRadius: "12px",
                     border: "1.5px dashed",
                     borderColor: "divider",
-                    bgcolor: "white",
+                    bgcolor: "background.paper",
                   }}
                 >
                   <Typography variant="body2" color="text.disabled">
@@ -542,7 +724,7 @@ const AddTask = () => {
                     <Stack
                       key={s.id}
                       direction="row"
-                      alignItems="center"
+                      alignItems="flex-start"
                       spacing={1}
                     >
                       <Typography
@@ -558,12 +740,24 @@ const AddTask = () => {
                         placeholder={`Subtask ${idx + 1}…`}
                         value={s.title}
                         onChange={(e) => updateSubtask(s.id, e.target.value)}
-                        sx={inputSx}
+                        error={isSubtaskTitleInvalid(s.id, s.title)}
+                        helperText={
+                          isSubtaskTitleInvalid(s.id, s.title)
+                            ? "Subtask title is required"
+                            : " "
+                        }
+                        sx={{
+                          ...inputSx,
+                          "& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "error.main",
+                            borderWidth: 2,
+                          },
+                        }}
                       />
                       <Tooltip title="Remove subtask">
                         <IconButton
                           size="small"
-                          onClick={() => removeSubtask(s.id)}
+                          onClick={() => requestRemoveSubtask(s.id)}
                           sx={{
                             color: "text.disabled",
                             flexShrink: 0,
@@ -613,7 +807,7 @@ const AddTask = () => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={!title.trim() || createTaskLoading}
+          disabled={isSaveDisabled}
           startIcon={
             createTaskLoading ? (
               <CircularProgress size={16} color="inherit" />
@@ -649,6 +843,16 @@ const AddTask = () => {
           {errorSnackbar}
         </Alert>
       </Snackbar>
+      <AlertDialog
+        open={pendingDeleteSubtaskId !== null}
+        title="Delete subtask?"
+        content="Are you sure you want to delete this subtask?"
+        variant="warning"
+        leftButtonText="Delete"
+        rightButtonText="Cancel"
+        onClose={() => setPendingDeleteSubtaskId(null)}
+        onConfirm={confirmRemoveSubtask}
+      />
     </Container>
   );
 };

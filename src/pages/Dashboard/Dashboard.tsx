@@ -12,6 +12,7 @@ import {
   getMaxPageAfterDelete,
   getPageSelectionState,
 } from "../../utils";
+import { isDashboardStatusCardEnabled } from "../../utils/featureFlags";
 import StatusCard from "../../components/StatusCard";
 import {
   type SortKey,
@@ -25,9 +26,11 @@ import FilterDialog from "../../components/FilterDialog";
 import TaskTable from "../../components/TaskTable";
 import AlertDialog from "../../components/AlertDialog";
 import DashboardToolbar from "../../components/DashboardToolbar";
+import { buildBreadcrumbTrail } from "../../components/Breadcrumbs";
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const Dashboard = () => {
+  const showDashboardStatusCard = isDashboardStatusCardEnabled();
   const navigate = useNavigate();
   const { tasks, loading, deleteTasks, deleteTaskLoading } = useTask({
     autoFetch: true,
@@ -117,7 +120,9 @@ const Dashboard = () => {
   };
 
   const handleViewTask = (id: number) => {
-    navigate(`/view/${id}`);
+    navigate(`/view/${id}`, {
+      state: { breadcrumbs: buildBreadcrumbTrail(`/view/${id}`) },
+    });
   };
 
   // ── CRUD
@@ -126,7 +131,9 @@ const Dashboard = () => {
   };
 
   const editTask = (id: number) => {
-    navigate(`/edit/${id}`);
+    navigate(`/edit/${id}`, {
+      state: { breadcrumbs: buildBreadcrumbTrail(`/edit/${id}`) },
+    });
   };
 
   const confirmDeleteSelected = () => {
@@ -163,10 +170,12 @@ const Dashboard = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* ── Stat cards ── */}
-      <StatusCard
-        card={getStatusCards({ total, done, highCount, progress })}
-        totalProgress={progress}
-      />
+      {showDashboardStatusCard && (
+        <StatusCard
+          card={getStatusCards({ total, done, highCount, progress })}
+          totalProgress={progress}
+        />
+      )}
 
       <DashboardToolbar
         filterOpen={filterOpen}

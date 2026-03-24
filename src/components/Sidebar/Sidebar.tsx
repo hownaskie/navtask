@@ -19,12 +19,12 @@ import {
   Logout,
   MenuOutlined,
   NightlightRound,
-  TaskAlt,
 } from "@mui/icons-material";
 import { useAuth } from "../../context/useAuthContext";
 import { AvatarUrl } from "../../utils";
 import AlertDialog from "../AlertDialog";
 import { SIDEBAR_WIDTH } from "./constants";
+import NavtaskIcon from "../NavTaskIcon";
 
 // ── Nav item config ───────────────────────────────────────────────────────────
 interface NavItem {
@@ -98,7 +98,7 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
             flexShrink: 0,
           }}
         >
-          <TaskAlt sx={{ color: "white", fontSize: 20 }} />
+          <NavtaskIcon width={36} height={36} color="white" />
         </Box>
         <Typography
           sx={{

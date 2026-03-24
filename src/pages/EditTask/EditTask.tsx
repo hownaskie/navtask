@@ -25,6 +25,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import type { Priority, Status } from "../../types/dashboard";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import { useTask } from "../../hooks/useTask";
@@ -34,14 +35,20 @@ import {
   statusLabelMap,
   statusValueMap,
 } from "../../constants/task";
+import {
+  MAX_ATTACHMENT_ITEMS,
+  MAX_SUBTASK_ITEMS,
+  SUBTASK_STATUS_LABELS,
+  SUBTASK_STATUS_OPTIONS,
+} from "../../constants/taskForm";
 import type { TaskStatus } from "../../types/auth";
-
-const SUBTASK_STATUS_OPTIONS: TaskStatus[] = [
-  "NOT_STARTED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "CANCELLED",
-];
+import {
+  DETAILS_MAX_LENGTH,
+  getMinDueDateString,
+  isDueDateAfterToday,
+} from "../../utils";
+import AlertDialog from "../../components/AlertDialog";
+import { buildBreadcrumbTrail } from "../../components/Breadcrumbs";
 
 interface Subtask {
   key: number;
@@ -92,10 +99,26 @@ const EditTask = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveErrorSnackbar, setSaveErrorSnackbar] = useState<string | null>(null);
+  const [completionDate, setCompletionDate] = useState<string | null>(null);
+  const [pendingCompletionConfirmation, setPendingCompletionConfirmation] = useState(false);
+  const [pendingDeleteSubtaskKey, setPendingDeleteSubtaskKey] = useState<number | null>(null);
+  const [touchedSubtaskKeys, setTouchedSubtaskKeys] = useState<Set<number>>(new Set());
+  const [subtaskValidationTriggered, setSubtaskValidationTriggered] = useState(false);
   const [initialSubtaskIds, setInitialSubtaskIds] = useState<Set<number>>(
     new Set(),
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const minDueDate = getMinDueDateString();
+  const hasInvalidTouchedSubtask = subtasks.some(
+    (subtask) =>
+      (subtaskValidationTriggered || touchedSubtaskKeys.has(subtask.key)) &&
+      !subtask.title.trim(),
+  );
+  const canMarkAsComplete = pendingCompletionConfirmation;
+  const isSaveDisabled =
+    !isDueDateAfterToday(dueDate) ||
+    !details.trim() ||
+    hasInvalidTouchedSubtask ||
+    updateTaskLoading;
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -120,6 +143,8 @@ const EditTask = () => {
       setDateCreated(data.createdDate.slice(0, 10));
       setDueDate(data.dueDate ? data.dueDate.slice(0, 10) : "");
       setDetails(data.details ?? "");
+      setCompletionDate(data.status === "COMPLETED" ? data.completedDate : null);
+      setPendingCompletionConfirmation(false);
       setSubtasks(
         data.subtasks.map((s) => ({
           key: s.id,
@@ -128,6 +153,15 @@ const EditTask = () => {
           status: s.status,
         })),
       );
+      const loadedAllSubtasksCompleted =
+        data.subtasks.length > 0 &&
+        data.subtasks.every((subtask) => subtask.status === "COMPLETED");
+
+      if (loadedAllSubtasksCompleted && data.status !== "COMPLETED") {
+        setStatus("Completed");
+        setCompletionDate(null);
+        setPendingCompletionConfirmation(true);
+      }
       setInitialSubtaskIds(new Set(data.subtasks.map((s) => s.id)));
       setAttachments(
         data.attachments.map((a) => ({
@@ -146,29 +180,99 @@ const EditTask = () => {
   }, [getTaskById, id]);
 
   // ── Subtask handlers
-  const addSubtask = () =>
+  const addSubtask = () => {
+    if (status === "Completed") {
+      setSaveErrorSnackbar("You cannot add subtasks when the task status is completed.");
+      return;
+    }
+
+    if (subtasks.length >= MAX_SUBTASK_ITEMS) {
+      setSaveErrorSnackbar(`You can only add up to ${MAX_SUBTASK_ITEMS} subtasks.`);
+      return;
+    }
+
     setSubtasks((prev) => [
       ...prev,
       { key: Date.now(), title: "", status: "NOT_STARTED" },
     ]);
+  };
 
-  const updateSubtask = (key: number, value: string) =>
+  const updateSubtask = (key: number, value: string) => {
+    setTouchedSubtaskKeys((prev) => new Set(prev).add(key));
     setSubtasks((prev) =>
       prev.map((s) => (s.key === key ? { ...s, title: value } : s)),
     );
+  };
 
-  const updateSubtaskStatus = (key: number, status: TaskStatus) =>
-    setSubtasks((prev) =>
-      prev.map((s) => (s.key === key ? { ...s, status } : s)),
+  const updateSubtaskStatus = (key: number, nextSubtaskStatus: TaskStatus) => {
+    const nextSubtasks = subtasks.map((subtask) =>
+      subtask.key === key ? { ...subtask, status: nextSubtaskStatus } : subtask,
     );
 
-  const removeSubtask = (key: number) =>
+    setSubtasks(nextSubtasks);
+
+    const nextAllSubtasksCompleted =
+      nextSubtasks.length > 0 &&
+      nextSubtasks.every((subtask) => subtask.status === "COMPLETED");
+
+    if (nextAllSubtasksCompleted) {
+      setStatus("Completed");
+      setCompletionDate(null);
+      setPendingCompletionConfirmation(true);
+    }
+  };
+
+  const removeSubtask = (key: number) => {
     setSubtasks((prev) => prev.filter((s) => s.key !== key));
+    setTouchedSubtaskKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const isSubtaskTitleInvalid = (key: number, titleValue: string) =>
+    (subtaskValidationTriggered || touchedSubtaskKeys.has(key)) && !titleValue.trim();
+
+  const requestRemoveSubtask = (key: number) => {
+    setPendingDeleteSubtaskKey(key);
+  };
+
+  const confirmRemoveSubtask = () => {
+    if (pendingDeleteSubtaskKey === null) {
+      return;
+    }
+
+    removeSubtask(pendingDeleteSubtaskKey);
+    setPendingDeleteSubtaskKey(null);
+  };
 
   // ── Attachment handlers
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const newAttachments: Attachment[] = Array.from(files).map((f) => ({
+    const remainingSlots = MAX_ATTACHMENT_ITEMS - attachments.length;
+
+    if (remainingSlots <= 0) {
+      setSaveErrorSnackbar(`You can upload up to ${MAX_ATTACHMENT_ITEMS} files only.`);
+      return;
+    }
+
+    const selectedFiles = Array.from(files);
+    const nonImages = selectedFiles.filter((f) => !f.type.startsWith("image/"));
+    if (nonImages.length > 0) {
+      setSaveErrorSnackbar("Only image files are supported.");
+      return;
+    }
+
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+
+    if (selectedFiles.length > remainingSlots) {
+      setSaveErrorSnackbar(
+        `You can upload up to ${MAX_ATTACHMENT_ITEMS} files only. Extra files were not added.`,
+      );
+    }
+
+    const newAttachments: Attachment[] = filesToAdd.map((f) => ({
       id: Date.now() + Math.random(),
       name: f.name,
       size:
@@ -183,24 +287,55 @@ const EditTask = () => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   // ── Submit
-  const handleSave = async () => {
+  const handleSave = async (successDestination: "view" | "list" = "view") => {
     const taskId = Number(id);
     if (!taskId || Number.isNaN(taskId)) {
       setError("Invalid task id.");
-      return;
+      return false;
     }
 
     if (!priority || !status || !title.trim()) {
-      setError("Title, priority, and status are required.");
-      return;
+      setSaveErrorSnackbar("Task data is incomplete. Please refresh and try again.");
+      return false;
     }
 
-    const validSubtasks = subtasks
-      .map((s) => ({ ...s, title: s.title.trim() }))
-      .filter((s) => s.title.length > 0);
+    if (!details.trim()) {
+      setSaveErrorSnackbar("Due date and description are required.");
+      return false;
+    }
+
+    if (!isDueDateAfterToday(dueDate)) {
+      setSaveErrorSnackbar("must be later than Date Created");
+      return false;
+    }
+
+    if (subtasks.length > MAX_SUBTASK_ITEMS) {
+      setSaveErrorSnackbar(`You can only add up to ${MAX_SUBTASK_ITEMS} subtasks.`);
+      return false;
+    }
+
+    const normalizedSubtasks = subtasks.map((subtask) => ({
+      ...subtask,
+      title: subtask.title.trim(),
+    }));
+
+    const emptySubtaskKeys = normalizedSubtasks
+      .filter((subtask) => !subtask.title)
+      .map((subtask) => subtask.key);
+
+    if (emptySubtaskKeys.length > 0) {
+      setSubtaskValidationTriggered(true);
+      setTouchedSubtaskKeys((prev) => {
+        const next = new Set(prev);
+        emptySubtaskKeys.forEach((subtaskKey) => next.add(subtaskKey));
+        return next;
+      });
+      setSaveErrorSnackbar("Subtask title cannot be empty.");
+      return false;
+    }
 
     const remainingIds = new Set(
-      validSubtasks.map((s) => s.id).filter((sid): sid is number => sid !== undefined),
+      normalizedSubtasks.map((s) => s.id).filter((sid): sid is number => sid !== undefined),
     );
 
     const deleteSubtaskIds = Array.from(initialSubtaskIds).filter(
@@ -213,7 +348,7 @@ const EditTask = () => {
       priority: priorityValueMap[priority],
       status: statusValueMap[status],
       dueDate: dueDate || undefined,
-      subtasks: validSubtasks.map((s) => ({
+      subtasks: normalizedSubtasks.map((s) => ({
         id: s.id,
         name: s.title,
         status: s.status,
@@ -223,13 +358,28 @@ const EditTask = () => {
 
     if (!success) {
       setSaveErrorSnackbar("Failed to save task. Please try again.");
-      return;
+      return false;
     }
 
-    navigate("/dashboard");
+    if (successDestination === "list") {
+      navigate("/dashboard");
+      return true;
+    }
+
+    navigate(`/view/${taskId}`, {
+      state: { breadcrumbs: buildBreadcrumbTrail(`/view/${taskId}`) },
+    });
+    return true;
   };
 
   const handleCancel = () => navigate("/dashboard");
+
+  const handleMarkAsComplete = async () => {
+    const nowIso = new Date().toISOString();
+    setCompletionDate(nowIso);
+    setPendingCompletionConfirmation(false);
+    await handleSave("list");
+  };
 
   // ── Shared input sx
   const inputSx = {
@@ -258,17 +408,17 @@ const EditTask = () => {
         sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box
-          sx={{
+          sx={(theme) => ({
             mx: "auto",
             mt: 10,
             p: 3,
             borderRadius: "12px",
             border: "1px solid",
-            borderColor: "rgba(239,68,68,0.2)",
-            bgcolor: "rgba(239,68,68,0.05)",
-          }}
+            borderColor: alpha(theme.palette.error.main, 0.28),
+            bgcolor: alpha(theme.palette.error.main, theme.palette.mode === "dark" ? 0.16 : 0.06),
+          })}
         >
-          <Typography sx={{ color: "#b91c1c", fontWeight: 600 }}>
+          <Typography sx={{ color: "error.main", fontWeight: 600 }}>
             {error}
           </Typography>
         </Box>
@@ -301,6 +451,7 @@ const EditTask = () => {
                 select
                 label="Select priority"
                 size="small"
+                disabled
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
                 slotProps={{
@@ -336,9 +487,18 @@ const EditTask = () => {
                 label="Select status"
                 size="small"
                 value={status}
-                onChange={(e) =>
-                  setStatus(e.target.value as Exclude<Status, "All">)
-                }
+                onChange={(e) => {
+                  const nextStatus = e.target.value as Exclude<Status, "All">;
+                  setStatus(nextStatus);
+
+                  if (nextStatus !== "Completed") {
+                    setCompletionDate(null);
+                    setPendingCompletionConfirmation(false);
+                  } else {
+                    setCompletionDate(null);
+                    setPendingCompletionConfirmation(true);
+                  }
+                }}
                 slotProps={{
                   inputLabel: {
                     shrink: true,
@@ -372,19 +532,50 @@ const EditTask = () => {
                   </MenuItem>
                 ))}
               </TextField>
+
+              {status === "Completed" && completionDate && (
+                <TextField
+                  fullWidth
+                  type="date"
+                  size="small"
+                  label="Date of Completion"
+                  disabled
+                  value={completionDate.slice(0, 10)}
+                  slotProps={{
+                    htmlInput: {
+                      readOnly: true,
+                    },
+                    input: {
+                      startAdornment: (
+                        <CalendarToday
+                          sx={{
+                            fontSize: 16,
+                            color: "text.disabled",
+                            mr: 0.75,
+                          }}
+                        />
+                      ),
+                    },
+                    inputLabel: {
+                      shrink: true,
+                    },
+                  }}
+                  sx={{ width: 300 }}
+                />
+              )}
             </Stack>
 
             {/* ── Title ── */}
             <Box>
-              <FormControl fullWidth variant="outlined">
+              <FormControl fullWidth variant="outlined" disabled>
                 <InputLabel shrink>Title</InputLabel>
                 <OutlinedInput
                   multiline
                   minRows={3}
                   label="Title"
                   notched
+                  readOnly
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
                 />
               </FormControl>
             </Box>
@@ -397,11 +588,11 @@ const EditTask = () => {
                   type="date"
                   size="small"
                   label="Date Created"
+                  disabled
                   value={dateCreated}
-                  onChange={(e) => setDateCreated(e.target.value)}
                   slotProps={{
                     htmlInput: {
-                      min: today,
+                      readOnly: true,
                     },
                     input: {
                       startAdornment: (
@@ -413,8 +604,6 @@ const EditTask = () => {
                           }}
                         />
                       ),
-                      onClick: (e) =>
-                        (e.target as HTMLInputElement).showPicker(),
                     },
                     inputLabel: {
                       shrink: true,
@@ -434,7 +623,7 @@ const EditTask = () => {
                   onChange={(e) => setDueDate(e.target.value)}
                   slotProps={{
                     htmlInput: {
-                      min: today,
+                      min: minDueDate,
                     },
                     input: {
                       startAdornment: (
@@ -461,16 +650,25 @@ const EditTask = () => {
             {/* ── Details ── */}
             <Box>
               <FormControl fullWidth variant="outlined">
-                <InputLabel shrink>Details (optional)</InputLabel>
+                <InputLabel shrink>Details</InputLabel>
                 <OutlinedInput
                   multiline
                   minRows={5}
-                  label="Details (optional)"
+                  label="Details"
                   notched
                   value={details}
-                  onChange={(e) => setDetails(e.target.value)}
+                  inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
+                  onChange={(e) =>
+                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH))
+                  }
                 />
               </FormControl>
+              <Typography
+                variant="caption"
+                sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
+              >
+                {details.length}/{DETAILS_MAX_LENGTH}
+              </Typography>
             </Box>
 
             {/* ── Attachments ── */}
@@ -551,16 +749,21 @@ const EditTask = () => {
                   display="block"
                   mt={0.5}
                 >
-                  Any file type · Max 10 MB each
+                  Images only · Up to {MAX_ATTACHMENT_ITEMS} files · Max 10 MB each
                 </Typography>
                 <input
                   id="file-upload"
                   type="file"
                   multiple
                   hidden
+                  accept="image/*"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
               </Box>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                {attachments.length}/{MAX_ATTACHMENT_ITEMS}
+              </Typography>
 
               {/* Attached file list */}
               {attachments.length > 0 && (
@@ -633,6 +836,7 @@ const EditTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "Completed"}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",
@@ -648,6 +852,10 @@ const EditTask = () => {
                   New Subtask
                 </Button>
               </Stack>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                {subtasks.length}/{MAX_SUBTASK_ITEMS}
+              </Typography>
 
               {subtasks.length === 0 ? (
                 <Box
@@ -671,7 +879,7 @@ const EditTask = () => {
                     <Stack
                       key={s.key}
                       direction="row"
-                      alignItems="center"
+                      alignItems="flex-start"
                       spacing={1}
                     >
                       <Typography
@@ -687,7 +895,19 @@ const EditTask = () => {
                         placeholder={`Subtask ${idx + 1}…`}
                         value={s.title}
                         onChange={(e) => updateSubtask(s.key, e.target.value)}
-                        sx={inputSx}
+                        error={isSubtaskTitleInvalid(s.key, s.title)}
+                        helperText={
+                          isSubtaskTitleInvalid(s.key, s.title)
+                            ? "Subtask title is required"
+                            : " "
+                        }
+                        sx={{
+                          ...inputSx,
+                          "& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "error.main",
+                            borderWidth: 2,
+                          },
+                        }}
                       />
                       <TextField
                         select
@@ -700,14 +920,14 @@ const EditTask = () => {
                       >
                         {SUBTASK_STATUS_OPTIONS.map((option) => (
                           <MenuItem key={option} value={option}>
-                            {statusLabelMap[option]}
+                            {SUBTASK_STATUS_LABELS[option]}
                           </MenuItem>
                         ))}
                       </TextField>
                       <Tooltip title="Remove subtask">
                         <IconButton
                           size="small"
-                          onClick={() => removeSubtask(s.key)}
+                          onClick={() => requestRemoveSubtask(s.key)}
                           sx={{
                             color: "text.disabled",
                             flexShrink: 0,
@@ -756,8 +976,10 @@ const EditTask = () => {
         </Button>
         <Button
           variant="contained"
-          onClick={handleSave}
-          disabled={!title.trim() || updateTaskLoading}
+          onClick={() => {
+            void (canMarkAsComplete ? handleMarkAsComplete() : handleSave());
+          }}
+          disabled={isSaveDisabled}
           sx={{
             borderRadius: "25px",
             textTransform: "none",
@@ -771,7 +993,11 @@ const EditTask = () => {
             "&.Mui-disabled": { opacity: 0.5 },
           }}
         >
-          {updateTaskLoading ? "Saving..." : "Save Task"}
+          {updateTaskLoading
+            ? "Saving..."
+            : canMarkAsComplete
+              ? "Mark as Complete"
+              : "Save Task"}
         </Button>
       </Box>
       <Snackbar
@@ -788,6 +1014,16 @@ const EditTask = () => {
           {saveErrorSnackbar}
         </Alert>
       </Snackbar>
+      <AlertDialog
+        open={pendingDeleteSubtaskKey !== null}
+        title="Delete subtask?"
+        content="Are you sure you want to delete this subtask?"
+        variant="warning"
+        leftButtonText="Delete"
+        rightButtonText="Cancel"
+        onClose={() => setPendingDeleteSubtaskKey(null)}
+        onConfirm={confirmRemoveSubtask}
+      />
     </Container>
   );
 };

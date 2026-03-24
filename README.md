@@ -86,6 +86,10 @@ npm run dev
 http://localhost:5173
 ```
 
+Optional feature flags:
+
+- `VITE_FEATURE_DASHBOARD_STATUS_CARD=false` hides the dashboard status-card section.
+
 ## Available Scripts
 
 - `npm run dev` - Start Vite dev server

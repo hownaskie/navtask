@@ -1,14 +1,19 @@
+import { Fragment, useState } from "react";
 import {
+  AttachFile,
   ArrowDownward,
   ArrowUpward,
   DeleteOutline,
   EditOutlined,
+  KeyboardArrowDown,
+  KeyboardArrowRight,
   UnfoldMore,
 } from "@mui/icons-material";
 import {
   Box,
   Checkbox,
   Chip,
+  Collapse,
   IconButton,
   Paper,
   Stack,
@@ -26,7 +31,7 @@ import { PRIORITY_COLORS } from "../../constants/colors";
 import { priorityLabelMap, statusLabelMap } from "../../constants/task";
 import type { SortDir, SortKey } from "../../types/dashboard";
 import type { TaskResponse } from "../../interfaces/task";
-import { formatDate, getDueDateColor, getTaskProgress } from "../../utils";
+import { formatDate, getDueDateColor, getTaskProgress, isDueToday } from "../../utils";
 import TaskTableSkeleton from "../TaskTableSkeleton";
 import TaskProgressStatus from "../TaskProgressStatus/TaskProgressStatus";
 
@@ -123,6 +128,20 @@ const TaskTable = ({
   onPageChange,
   onRowsPerPageChange,
 }: TaskTableProps) => {
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<number>>(new Set());
+
+  const toggleExpandedTask = (taskId: number) => {
+    setExpandedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
   return (
     <TableContainer
       component={Paper}
@@ -196,13 +215,18 @@ const TaskTable = ({
                     />
                   )}
                 </TableCell>
-                <SortHeader
-                  label="Title"
-                  sortKey="title"
-                  active={sortKey === "title"}
-                  direction={sortDir}
-                  onSort={onSort}
-                />
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: "0.78rem",
+                    color: "text.secondary",
+                    whiteSpace: "nowrap",
+                    py: 1.5,
+                    px: 2,
+                  }}
+                >
+                  Title
+                </TableCell>
                 <SortHeader
                   label="Due Date"
                   sortKey="dueDate"
@@ -244,115 +268,292 @@ const TaskTable = ({
                 paginated.map((task, idx) => {
                   const isSelected = selectedIds.has(task.id);
                   const isDone = task.status === "COMPLETED";
+                  const dueToday = isDueToday(task.dueDate);
+                  const hasSubtasks = task.subtasks.length > 0;
+                  const isExpanded = expandedTaskIds.has(task.id);
                   const { completed: progressCompleted, total: progressTotal } =
                     getTaskProgress(task);
                   const pStyle = PRIORITY_COLORS[priorityLabelMap[task.priority]];
                   return (
-                    <TableRow
-                      key={task.id}
-                      selected={isSelected}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewTask(task.id);
-                      }}
-                      sx={{
-                        bgcolor: isSelected
-                          ? "rgba(37,99,235,0.08) !important"
-                          : isDone
-                            ? "action.hover"
-                            : "background.paper",
-                        opacity: isDone && !isSelected ? 0.65 : 1,
-                        transition: "all 0.15s",
-                        borderTop: idx === 0 ? "none" : "1px solid",
-                        borderColor: "divider",
-                        cursor: "pointer",
-                        "&:hover": { bgcolor: "rgba(37,99,235,0.025)" },
-                        "&.Mui-selected:hover": {
-                          bgcolor: "rgba(37,99,235,0.07) !important",
-                        },
-                        "&:hover .row-edit": { opacity: 1 },
-                      }}
-                    >
-                      <TableCell padding="checkbox" sx={{ pl: 2 }}>
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => onSelectRow(task.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          size="small"
-                          sx={{
-                            color: "#CBD5E1",
-                            "&.Mui-checked": { color: "primary.main" },
-                          }}
-                        />
-                      </TableCell>
+                    <Fragment key={task.id}>
+                      <TableRow
+                        selected={isSelected}
+                        onClick={selectedCount > 0 ? () => onSelectRow(task.id) : undefined}
+                        sx={{
+                          bgcolor: isSelected
+                            ? "rgba(37,99,235,0.08) !important"
+                            : isDone
+                              ? "action.hover"
+                              : "background.paper",
+                          opacity: isDone && !isSelected ? 0.65 : 1,
+                          transition: "all 0.15s",
+                          borderTop: idx === 0 ? "none" : "1px solid",
+                          borderColor: "divider",
+                          cursor: selectedCount > 0 ? "pointer" : "default",
+                          "&:hover": { bgcolor: "rgba(37,99,235,0.025)" },
+                          "&.Mui-selected:hover": {
+                            bgcolor: "rgba(37,99,235,0.07) !important",
+                          },
+                          "&:hover .row-edit": { opacity: 1 },
+                        }}
+                      >
+                        <TableCell padding="checkbox" sx={{ pl: 2 }}>
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => onSelectRow(task.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            size="small"
+                            sx={{
+                              color: "#CBD5E1",
+                              "&.Mui-checked": { color: "primary.main" },
+                            }}
+                          />
+                        </TableCell>
 
-                      <TableCell sx={{ py: 1.5, px: 2 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 500,
-                            fontSize: "0.875rem",
-                            textDecoration: isDone ? "line-through" : "none",
-                            color: isDone ? "text.secondary" : "text.primary",
-                          }}
-                        >
-                          {task.title}
-                        </Typography>
-                      </TableCell>
+                        <TableCell sx={{ py: 1.5, px: 2 }}>
+                          <Stack direction="row" alignItems="center" spacing={0.75}>
+                            {hasSubtasks && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleExpandedTask(task.id);
+                                }}
+                                sx={{
+                                  p: 0.25,
+                                  width: 22,
+                                  height: 22,
+                                  color: "text.secondary",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {isExpanded ? (
+                                  <KeyboardArrowDown fontSize="small" />
+                                ) : (
+                                  <KeyboardArrowRight fontSize="small" />
+                                )}
+                              </IconButton>
+                            )}
+                            <Typography
+                              variant="body2"
+                              component="button"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (selectedCount > 0) {
+                                  onSelectRow(task.id);
+                                  return;
+                                }
+                                onViewTask(task.id);
+                              }}
+                              sx={{
+                                p: 0,
+                                border: 0,
+                                bgcolor: "transparent",
+                                fontWeight: 700,
+                                fontSize: "0.875rem",
+                                textDecoration: isDone ? "underline line-through" : "underline",
+                                color: isDone ? "text.secondary" : "text.primary",
+                                textAlign: "left",
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                                "&:hover": {
+                                  color: "primary.main",
+                                },
+                              }}
+                            >
+                              {task.title}
+                            </Typography>
+                            {task.attachments.length > 0 && (
+                              <AttachFile
+                                sx={{
+                                  fontSize: 16,
+                                  color: isDone ? "text.disabled" : "text.secondary",
+                                  transform: "rotate(-45deg)",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                          </Stack>
+                        </TableCell>
 
-                      <TableCell sx={{ py: 1.5, px: 2 }}>
-                        <Typography
-                          variant="body2"
-                          color={getDueDateColor(task.dueDate)}
-                          fontWeight={task.dueDate ? 500 : 400}
-                          fontSize="0.82rem"
-                        >
-                          {task.dueDate
-                            ? formatDate(task.dueDate)
-                            : "No due date"}
-                        </Typography>
-                      </TableCell>
+                        <TableCell sx={{ py: 1.5, px: 2 }}>
+                          <Stack spacing={0.15}>
+                            <Typography
+                              variant="body2"
+                              color={getDueDateColor(task.dueDate)}
+                              fontWeight={task.dueDate ? 500 : 400}
+                              fontSize="0.82rem"
+                            >
+                              {task.dueDate
+                                ? formatDate(task.dueDate)
+                                : "No due date"}
+                            </Typography>
+                            {dueToday && (
+                              <Typography
+                                variant="caption"
+                                color="#0591a1"
+                                sx={{ fontWeight: 600, lineHeight: 1.2 }}
+                              >
+                                Today
+                              </Typography>
+                            )}
+                          </Stack>
+                        </TableCell>
 
-                      <TableCell sx={{ py: 1.5, px: 2 }}>
-                        <Chip
-                          label={task.priority}
-                          size="small"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.72rem",
-                            height: 22,
-                            bgcolor: pStyle.bg,
-                            color: pStyle.color,
-                            border: "none",
-                            "& .MuiChip-label": { px: 1 },
-                          }}
-                        />
-                      </TableCell>
+                        <TableCell sx={{ py: 1.5, px: 2 }}>
+                          <Chip
+                            label={task.priority}
+                            size="small"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "0.72rem",
+                              height: 22,
+                              bgcolor: pStyle.bg,
+                              color: pStyle.color,
+                              border: "none",
+                              "& .MuiChip-label": { px: 1 },
+                            }}
+                          />
+                        </TableCell>
 
-                      <TableCell sx={{ py: 1.5, px: 2 }}>
-                        <TaskProgressStatus
-                          status={statusLabelMap[task.status]}
-                          completed={progressCompleted}
-                          total={progressTotal}
-                        />
-                      </TableCell>
+                        <TableCell sx={{ py: 1.5, px: 2 }}>
+                          <TaskProgressStatus
+                            status={statusLabelMap[task.status]}
+                            completed={progressCompleted}
+                            total={progressTotal}
+                            statusDate={
+                              task.status === "COMPLETED" && task.completedDate
+                                ? formatDate(task.completedDate)
+                                : undefined
+                            }
+                          />
+                        </TableCell>
 
-                      <TableCell sx={{ py: 1.5, px: 1 }}>
-                        <IconButton
-                          className="row-edit"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditTask(task.id);
-                          }}
-                          sx={{
-                            color: "primary.secondary",
-                          }}
-                        >
-                          <EditOutlined fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+                        <TableCell sx={{ py: 1.5, px: 1 }}>
+                          <IconButton
+                            className="row-edit"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditTask(task.id);
+                            }}
+                            sx={{
+                              color: "primary.secondary",
+                            }}
+                          >
+                            <EditOutlined fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                      {hasSubtasks && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            sx={{
+                              py: 0,
+                              px: 0,
+                              border: 0,
+                              bgcolor: "background.paper",
+                            }}
+                          >
+                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                              <Box
+                                sx={{
+                                  borderTop: "1px solid",
+                                  borderColor: "divider",
+                                  bgcolor: "background.paper",
+                                }}
+                              >
+                                <Table size="small" sx={{ tableLayout: "fixed" }}>
+                                  <TableBody>
+                                    {task.subtasks.map((subtask, subtaskIndex) => (
+                                      <TableRow key={subtask.id}>
+                                        <TableCell
+                                          sx={{
+                                            width: 48,
+                                            py: 1.5,
+                                            pl: 2,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        />
+                                        <TableCell
+                                          sx={{
+                                            py: 1.5,
+                                            px: 2,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        >
+                                          <Stack direction="row" alignItems="center" spacing={0.75}>
+                                            <Box sx={{ width: 22, height: 22, flexShrink: 0 }} />
+                                            <Typography
+                                              variant="body2"
+                                              sx={{
+                                                fontWeight: 700,
+                                                fontSize: "0.875rem",
+                                                color: "text.primary",
+                                              }}
+                                            >
+                                              {subtask.name}
+                                            </Typography>
+                                          </Stack>
+                                        </TableCell>
+                                        <TableCell
+                                          sx={{
+                                            py: 1.5,
+                                            px: 2,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        />
+                                        <TableCell
+                                          sx={{
+                                            py: 1.5,
+                                            px: 2,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        />
+                                        <TableCell
+                                          sx={{
+                                            py: 1.5,
+                                            px: 2,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="body2"
+                                            sx={{
+                                              fontWeight: 600,
+                                              fontSize: "0.78rem",
+                                              color: subtask.status === "COMPLETED" ? "success.main" : "text.secondary",
+                                            }}
+                                          >
+                                            {subtask.status === "COMPLETED" ? "Done" : "Not Done"}
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell
+                                          sx={{
+                                            width: 48,
+                                            py: 1.5,
+                                            px: 1,
+                                            borderTop: subtaskIndex === 0 ? "none" : "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        />
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
                   );
                 })
               )}

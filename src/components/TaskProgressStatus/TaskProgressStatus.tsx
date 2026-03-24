@@ -57,15 +57,29 @@ const TaskProgressStatus = ({
           />
         )}
       </Box>
-      <Typography
-        sx={{
-          fontSize: "0.78rem",
-          fontWeight: 600,
-          color: "#727070",
-        }}
-      >
-        {statusDate ? `${status} • ${statusDate}` : status}
-      </Typography>
+      <Stack spacing={0.15}>
+        <Typography
+          sx={{
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            color: "text.secondary",
+            lineHeight: 1.2,
+          }}
+        >
+          {status}
+        </Typography>
+        {statusDate && (
+          <Typography
+            sx={{
+              fontSize: "0.72rem",
+              color: "text.disabled",
+              lineHeight: 1.2,
+            }}
+          >
+            {statusDate}
+          </Typography>
+        )}
+      </Stack>
     </Stack>
   );
 };

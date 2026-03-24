@@ -10,6 +10,8 @@ export interface Subtask {
   id: number;
   name: string;
   status: SubtaskStatus;
+  createdDate: string;
+  completedDate: string | null;
 }
 
 export interface TaskResponse {
@@ -21,6 +23,7 @@ export interface TaskResponse {
   userId: number;
   createdDate: string; // ISO date
   dueDate: string | null; // ISO date
+  completedDate: string | null; // ISO date
   updatedDate: string; // ISO datetime
   attachments: Attachment[];
   subtasks: Subtask[];

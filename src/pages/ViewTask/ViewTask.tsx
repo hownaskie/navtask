@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Stack,
   Typography,
   Divider,
-  LinearProgress,
   IconButton,
   Tooltip,
   Container,
   CircularProgress,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   CalendarToday,
-  RadioButtonUnchecked,
-  CheckCircle,
   EditOutlined,
   DeleteOutlined,
 } from "@mui/icons-material";
@@ -25,15 +23,20 @@ import SectionLabel from "../../components/SectionLabel";
 import AlertDialog from "../../components/AlertDialog";
 import AttachmentCard from "../../components/AttachmentCard";
 import { useTask } from "../../hooks/useTask";
-import { getTaskProgressByStatus } from "../../utils";
+import { getTaskProgressByStatus, getAttachmentName, getAttachmentType, getAttachmentUrl } from "../../utils";
 import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
 import type { Priority, Status } from "../../types/dashboard";
 import { priorityLabelMap, statusLabelMap } from "../../constants/task";
+import { SUBTASK_STATUS_LABELS } from "../../constants/taskForm";
+import {
+  buildBreadcrumbTrail,
+  type BreadcrumbState,
+} from "../../components/Breadcrumbs";
 
 type TaskSubtaskView = {
   id: number;
   title: string;
-  status: Exclude<Status, "All">;
+  status: "Not Done" | "Done";
 };
 
 type TaskDetails = {
@@ -41,6 +44,7 @@ type TaskDetails = {
   title: string;
   details: string;
   createdDate: string;
+  completedDate: string | null;
   updatedDate: string;
   dueDate: string | null;
   priority: Priority;
@@ -50,6 +54,7 @@ type TaskDetails = {
 
 const ViewTask = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const { getTaskById, deleteTask, deleteTaskLoading } = useTask();
 
@@ -58,6 +63,10 @@ const ViewTask = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
+
+  const currentBreadcrumbs =
+    (location.state as BreadcrumbState | null)?.breadcrumbs ??
+    buildBreadcrumbTrail(location.pathname);
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -81,6 +90,7 @@ const ViewTask = () => {
         title: data.title,
         details: data.details ?? "No details provided.",
         createdDate: data.createdDate,
+        completedDate: data.completedDate,
         updatedDate: data.updatedDate,
         dueDate: data.dueDate,
         priority: priorityLabelMap[data.priority],
@@ -92,7 +102,7 @@ const ViewTask = () => {
         data.subtasks.map((subtask) => ({
           id: subtask.id,
           title: subtask.name,
-          status: statusLabelMap[subtask.status],
+          status: SUBTASK_STATUS_LABELS[subtask.status as "NOT_STARTED" | "COMPLETED"],
         })),
       );
 
@@ -101,18 +111,6 @@ const ViewTask = () => {
 
     void fetchTask();
   }, [getTaskById, id]);
-
-  const toggle = (id: number) =>
-    setSubtasks((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: t.status === "Completed" ? "Not Started" : "Completed",
-            }
-          : t,
-      ),
-    );
 
   const handleConfirmDelete = async () => {
     if (!task) return;
@@ -127,54 +125,15 @@ const ViewTask = () => {
     setError("Failed to delete task. Please try again.");
   };
 
-  const completed = subtasks.filter((t) => t.status === "Completed").length;
+  const completed = subtasks.filter((t) => t.status === "Done").length;
   const { completed: progressCompleted, total: progressTotal } =
     getTaskProgressByStatus(task?.status ?? "Not Started", completed, subtasks.length);
   const completionDate =
     task?.status === "Completed"
-      ? formatDateDdMmmYyyy(task.updatedDate)
+      ? task.completedDate
+        ? formatDateDdMmmYyyy(task.completedDate)
+        : undefined
       : undefined;
-  const progress =
-    progressTotal > 0
-      ? Math.round((progressCompleted / progressTotal) * 100)
-      : 0;
-
-  const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN?.replace(/\/$/, "") ?? "";
-
-  const getAttachmentName = (url: string, fallbackId: number) => {
-    const rawName = url.split("/").pop();
-    return rawName ? decodeURIComponent(rawName) : `attachment-${fallbackId}`;
-  };
-
-  const getAttachmentExtension = (url: string) => {
-    const sanitizedUrl = url.split("?")[0].split("#")[0];
-    const extension = sanitizedUrl.split(".").pop();
-    return extension?.toLowerCase() ?? "";
-  };
-
-  const getAttachmentType = (url: string) => {
-    const ext = getAttachmentExtension(url);
-
-    if (["png", "jpg", "jpeg", "webp"].includes(ext)) return "image";
-    if (ext === "pdf") return "pdf";
-    if (["doc", "docx"].includes(ext)) return "doc";
-    if (["xls", "xlsx", "csv"].includes(ext)) return "sheet";
-    if (["ppt", "pptx"].includes(ext)) return "slide";
-
-    return "file";
-  };
-
-  const getAttachmentUrl = (url: string) => {
-    if (/^https?:\/\//i.test(url)) {
-      return url;
-    }
-
-    if (backendOrigin && url.startsWith("/")) {
-      return `${backendOrigin}${url}`;
-    }
-
-    return url;
-  };
 
   if (loading) {
     return (
@@ -194,17 +153,17 @@ const ViewTask = () => {
         sx={{ minHeight: "100vh", bgcolor: "background.default", p: { xs: 2, sm: 4 } }}
       >
         <Box
-          sx={{
+          sx={(theme) => ({
             mx: "auto",
             mt: 10,
             p: 3,
             borderRadius: "12px",
             border: "1px solid",
-            borderColor: "rgba(239,68,68,0.2)",
-            bgcolor: "rgba(239,68,68,0.05)",
-          }}
+            borderColor: alpha(theme.palette.error.main, 0.28),
+            bgcolor: alpha(theme.palette.error.main, theme.palette.mode === "dark" ? 0.16 : 0.06),
+          })}
         >
-          <Typography sx={{ color: "#b91c1c", fontWeight: 600 }}>
+          <Typography sx={{ color: "error.main", fontWeight: 600 }}>
             {error ?? "Task not found."}
           </Typography>
         </Box>
@@ -258,7 +217,23 @@ const ViewTask = () => {
                 </IconButton>
               </Tooltip>
               <Tooltip title="Edit">
-                <IconButton size="small" sx={{ color: "text.secondary" }}>
+                <IconButton
+                  size="small"
+                  onClick={() =>
+                    navigate(`/edit/${task.id}`, {
+                      state: {
+                        breadcrumbs: [
+                          ...currentBreadcrumbs,
+                          {
+                            label: "Edit Task",
+                            href: `/edit/${task.id}`,
+                          },
+                        ],
+                      },
+                    })
+                  }
+                  sx={{ color: "text.secondary" }}
+                >
                   <EditOutlined fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -386,22 +361,6 @@ const ViewTask = () => {
               </Typography>
             </Stack>
 
-            {/* Progress bar */}
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                mb: 2,
-                height: 5,
-                borderRadius: 4,
-                bgcolor: "action.hover",
-                "& .MuiLinearProgress-bar": {
-                  borderRadius: 4,
-                  bgcolor: "primary.main",
-                },
-              }}
-            />
-
             <Stack spacing={0.75}>
               {subtasks.map((taskItem) => (
                 <Stack
@@ -409,46 +368,32 @@ const ViewTask = () => {
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
-                  onClick={() => toggle(taskItem.id)}
                   sx={{
                     px: 1.5,
                     py: 1,
                     borderRadius: "10px",
                     border: "1px solid",
                     borderColor:
-                      taskItem.status === "Completed"
+                      taskItem.status === "Done"
                         ? "rgba(34,197,94,0.2)"
                         : "divider",
                     bgcolor:
-                      taskItem.status === "Completed"
+                      taskItem.status === "Done"
                         ? "rgba(34,197,94,0.03)"
                         : "background.paper",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      bgcolor: "action.hover",
-                    },
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1.25}>
-                    {taskItem.status === "Completed" ? (
-                      <CheckCircle sx={{ fontSize: 18, color: "#22c55e" }} />
-                    ) : (
-                      <RadioButtonUnchecked
-                        sx={{ fontSize: 18, color: "text.disabled" }}
-                      />
-                    )}
                     <Typography
                       sx={{
                         fontSize: "0.875rem",
                         fontWeight: 500,
                         color:
-                          taskItem.status === "Completed"
+                          taskItem.status === "Done"
                             ? "text.disabled"
                             : "text.primary",
                         textDecoration:
-                          taskItem.status === "Completed"
+                          taskItem.status === "Done"
                             ? "line-through"
                             : "none",
                       }}
