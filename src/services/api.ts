@@ -91,7 +91,7 @@ export const taskApi = {
     api.get<ApiResponse<TaskResponse[]>>(`/tasks/user/${userId}`),
 
   // Update an existing task
-  update: (id: number, data: UpdateTaskRequest, images?: FileList) => {
+  update: (id: number, data: UpdateTaskRequest, images?: File[] | FileList) => {
     const formData = new FormData();
     formData.append(
       "task",

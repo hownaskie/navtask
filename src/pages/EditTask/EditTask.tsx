@@ -61,7 +61,48 @@ interface Attachment {
   id: number;
   name: string;
   size: string;
+  url?: string;
+  file?: File;
 }
+
+const formatFileSize = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return "-";
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${bytes} B`;
+};
+
+const resolveAttachmentSize = async (url: string): Promise<string> => {
+  try {
+    const headResponse = await fetch(url, { method: "HEAD" });
+    if (headResponse.ok) {
+      const contentLengthHeader = headResponse.headers.get("content-length");
+      const contentLength = contentLengthHeader ? Number(contentLengthHeader) : NaN;
+      if (!Number.isNaN(contentLength)) {
+        return formatFileSize(contentLength);
+      }
+    }
+
+    const getResponse = await fetch(url);
+    if (!getResponse.ok) {
+      return "-";
+    }
+
+    const fileBlob = await getResponse.blob();
+    return formatFileSize(fileBlob.size);
+  } catch {
+    return "-";
+  }
+};
 
 // ── Section label ─────────────────────────────────────────────────────────────
 const SectionLabel = ({ children }: { children: string }) => (
@@ -83,7 +124,7 @@ const SectionLabel = ({ children }: { children: string }) => (
 // ── Page ──────────────────────────────────────────────────────────────────────
 const EditTask = () => {
   const { id } = useParams();
-  const { getTaskById, updateTask, updateTaskLoading } = useTask();
+  const { getTaskById, updateTask, updateTaskLoading, deleteAttachment } = useTask();
   const navigate = useNavigate();
 
   // ── Form state
@@ -99,12 +140,17 @@ const EditTask = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveErrorSnackbar, setSaveErrorSnackbar] = useState<string | null>(null);
+  const [saveSuccessSnackbarOpen, setSaveSuccessSnackbarOpen] = useState(false);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
   const [completionDate, setCompletionDate] = useState<string | null>(null);
   const [pendingCompletionConfirmation, setPendingCompletionConfirmation] = useState(false);
   const [pendingDeleteSubtaskKey, setPendingDeleteSubtaskKey] = useState<number | null>(null);
   const [touchedSubtaskKeys, setTouchedSubtaskKeys] = useState<Set<number>>(new Set());
   const [subtaskValidationTriggered, setSubtaskValidationTriggered] = useState(false);
   const [initialSubtaskIds, setInitialSubtaskIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [initialAttachmentIds, setInitialAttachmentIds] = useState<Set<number>>(
     new Set(),
   );
   const minDueDate = getMinDueDateString();
@@ -163,15 +209,30 @@ const EditTask = () => {
         setPendingCompletionConfirmation(true);
       }
       setInitialSubtaskIds(new Set(data.subtasks.map((s) => s.id)));
-      setAttachments(
-        data.attachments.map((a) => ({
-          id: a.id,
-          name: decodeURIComponent(
-            a.attachmentUrl.split("/").pop() ?? `attachment-${a.id}`,
-          ),
-          size: "-",
-        })),
-      );
+      setInitialAttachmentIds(new Set(data.attachments.map((attachment) => attachment.id)));
+      const mappedAttachments = data.attachments.map((a) => ({
+        id: a.id,
+        name: decodeURIComponent(
+          a.attachmentUrl.split("/").pop() ?? `attachment-${a.id}`,
+        ),
+        size: "Loading...",
+        url: a.attachmentUrl,
+      }));
+
+      setAttachments(mappedAttachments);
+
+      void Promise.all(
+        mappedAttachments.map(async (attachment) => {
+          if (!attachment.url) {
+            return { ...attachment, size: "-" };
+          }
+
+          const size = await resolveAttachmentSize(attachment.url);
+          return { ...attachment, size };
+        }),
+      ).then((attachmentsWithSize) => {
+        setAttachments(attachmentsWithSize);
+      });
 
       setLoading(false);
     };
@@ -275,10 +336,8 @@ const EditTask = () => {
     const newAttachments: Attachment[] = filesToAdd.map((f) => ({
       id: Date.now() + Math.random(),
       name: f.name,
-      size:
-        f.size > 1024 * 1024
-          ? `${(f.size / 1024 / 1024).toFixed(1)} MB`
-          : `${(f.size / 1024).toFixed(0)} KB`,
+      size: formatFileSize(f.size),
+      file: f,
     }));
     setAttachments((prev) => [...prev, ...newAttachments]);
   };
@@ -287,7 +346,7 @@ const EditTask = () => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   // ── Submit
-  const handleSave = async (successDestination: "view" | "list" = "view") => {
+  const handleSave = async (successDestination: "view" | "list" = "list") => {
     const taskId = Number(id);
     if (!taskId || Number.isNaN(taskId)) {
       setError("Invalid task id.");
@@ -342,6 +401,20 @@ const EditTask = () => {
       (sid) => !remainingIds.has(sid),
     );
 
+    const currentExistingAttachmentIds = new Set(
+      attachments
+        .map((attachment) => attachment.id)
+        .filter((attachmentId) => initialAttachmentIds.has(attachmentId)),
+    );
+
+    const deleteAttachmentIds = Array.from(initialAttachmentIds).filter(
+      (attachmentId) => !currentExistingAttachmentIds.has(attachmentId),
+    );
+
+    const newAttachmentFiles = attachments
+      .map((attachment) => attachment.file)
+      .filter((file): file is File => Boolean(file));
+
     const success = await updateTask(taskId, {
       title: title.trim(),
       details: details.trim() || undefined,
@@ -354,15 +427,27 @@ const EditTask = () => {
         status: s.status,
       })),
       deleteSubtaskIds,
-    });
+    }, newAttachmentFiles.length > 0 ? newAttachmentFiles : undefined);
 
     if (!success) {
       setSaveErrorSnackbar("Failed to save task. Please try again.");
       return false;
     }
 
+    if (deleteAttachmentIds.length > 0) {
+      const deletionResults = await Promise.all(
+        deleteAttachmentIds.map((attachmentId) => deleteAttachment(taskId, attachmentId)),
+      );
+
+      if (deletionResults.some((result) => !result)) {
+        setSaveErrorSnackbar("Task saved, but some attachments could not be removed.");
+        return false;
+      }
+    }
+
     if (successDestination === "list") {
-      navigate("/dashboard");
+      setPendingNavigationPath("/dashboard");
+      setSaveSuccessSnackbarOpen(true);
       return true;
     }
 
@@ -379,6 +464,15 @@ const EditTask = () => {
     setCompletionDate(nowIso);
     setPendingCompletionConfirmation(false);
     await handleSave("list");
+  };
+
+  const handleSuccessSnackbarClose = () => {
+    setSaveSuccessSnackbarOpen(false);
+
+    if (pendingNavigationPath) {
+      navigate(pendingNavigationPath);
+      setPendingNavigationPath(null);
+    }
   };
 
   // ── Shared input sx
@@ -751,6 +845,13 @@ const EditTask = () => {
                 >
                   Images only · Up to {MAX_ATTACHMENT_ITEMS} files · Max 10 MB each
                 </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1.25, mb: attachments.length > 0 ? 1.5 : 0 }}
+                >
+                  {attachments.length}/{MAX_ATTACHMENT_ITEMS}
+                </Typography>
                 <input
                   id="file-upload"
                   type="file"
@@ -759,62 +860,98 @@ const EditTask = () => {
                   accept="image/*"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
-              </Box>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
-                {attachments.length}/{MAX_ATTACHMENT_ITEMS}
-              </Typography>
-
-              {/* Attached file list */}
-              {attachments.length > 0 && (
-                <Stack spacing={0.75} mt={1.5}>
+                {attachments.length > 0 && (
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    justifyContent="flex-start"
+                    gap={1.5}
+                    sx={{ px: { xs: 0, sm: 1 } }}
+                  >
                   {attachments.map((a) => (
                     <Stack
                       key={a.id}
-                      direction="row"
-                      alignItems="center"
                       justifyContent="space-between"
                       sx={{
-                        px: 1.5,
-                        py: 1,
-                        borderRadius: "10px",
+                        position: "relative",
+                        width: { xs: "calc(50% - 6px)", sm: 132 },
+                        minHeight: 170,
+                        p: 1.25,
+                        borderRadius: "12px",
                         border: "1px solid",
                         borderColor: "divider",
                         bgcolor: "background.paper",
+                        textAlign: "left",
+                        boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)",
+                        overflow: "hidden",
+                        "&::before": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          width: 18,
+                          height: 18,
+                          bgcolor: "action.hover",
+                          borderLeft: "1px solid",
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                        },
                       }}
+                      onClick={(event) => event.stopPropagation()}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1.2}>
-                        <AttachFile
-                          sx={{ fontSize: 16, color: "primary.main" }}
-                        />
-                        <Typography
-                          variant="body2"
-                          fontWeight={500}
-                          noWrap
-                          sx={{ maxWidth: 300 }}
-                        >
-                          {a.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          {a.size}
-                        </Typography>
-                      </Stack>
                       <Tooltip title="Remove">
                         <IconButton
                           size="small"
-                          onClick={() => removeAttachment(a.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeAttachment(a.id);
+                          }}
                           sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            width: 24,
+                            height: 24,
                             color: "text.disabled",
-                            "&:hover": { color: "error.main" },
+                            bgcolor: "background.paper",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { color: "error.main", bgcolor: "background.paper" },
                           }}
                         >
-                          <Close fontSize="small" />
+                          <Close sx={{ fontSize: 14 }} />
                         </IconButton>
                       </Tooltip>
+
+                      <Stack alignItems="center" justifyContent="center" sx={{ mt: 2.5, mb: 1.5 }}>
+                        <AttachFile
+                          sx={{ fontSize: 34, color: "primary.main" }}
+                        />
+                      </Stack>
+
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: "text.primary",
+                            wordBreak: "break-word",
+                            whiteSpace: "normal",
+                            lineHeight: 1.25,
+                          }}
+                          title={a.name}
+                        >
+                          {a.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {a.size}
+                        </Typography>
+                      </Box>
                     </Stack>
                   ))}
-                </Stack>
-              )}
+                  </Stack>
+                )}
+              </Box>
             </Box>
 
             {/* ── Divider ── */}
@@ -1012,6 +1149,16 @@ const EditTask = () => {
           sx={{ width: "100%" }}
         >
           {saveErrorSnackbar}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={saveSuccessSnackbarOpen}
+        autoHideDuration={1200}
+        onClose={handleSuccessSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="success" onClose={handleSuccessSnackbarClose} sx={{ width: "100%" }}>
+          Task saved successfully.
         </Alert>
       </Snackbar>
       <AlertDialog

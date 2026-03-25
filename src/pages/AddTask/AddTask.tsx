@@ -596,6 +596,13 @@ const AddTask = () => {
                 >
                   Images only · Up to {MAX_ATTACHMENT_ITEMS} files · Max 10 MB each
                 </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1.25, mb: attachments.length > 0 ? 1.5 : 0 }}
+                >
+                  {attachments.length}/{MAX_ATTACHMENT_ITEMS}
+                </Typography>
                 <input
                   id="file-upload"
                   type="file"
@@ -604,62 +611,98 @@ const AddTask = () => {
                   accept="image/*"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
-              </Box>
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
-                {attachments.length}/{MAX_ATTACHMENT_ITEMS}
-              </Typography>
-
-              {/* Attached file list */}
-              {attachments.length > 0 && (
-                <Stack spacing={0.75} mt={1.5}>
+                {attachments.length > 0 && (
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    justifyContent="flex-start"
+                    gap={1.5}
+                    sx={{ px: { xs: 0, sm: 1 } }}
+                  >
                   {attachments.map((a) => (
                     <Stack
                       key={a.id}
-                      direction="row"
-                      alignItems="center"
                       justifyContent="space-between"
                       sx={{
-                        px: 1.5,
-                        py: 1,
-                        borderRadius: "10px",
+                        position: "relative",
+                        width: { xs: "calc(50% - 6px)", sm: 132 },
+                        minHeight: 170,
+                        p: 1.25,
+                        borderRadius: "12px",
                         border: "1px solid",
                         borderColor: "divider",
                         bgcolor: "background.paper",
+                        textAlign: "left",
+                        boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)",
+                        overflow: "hidden",
+                        "&::before": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          width: 18,
+                          height: 18,
+                          bgcolor: "action.hover",
+                          borderLeft: "1px solid",
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                        },
                       }}
+                      onClick={(event) => event.stopPropagation()}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1.2}>
-                        <AttachFile
-                          sx={{ fontSize: 16, color: "primary.main" }}
-                        />
-                        <Typography
-                          variant="body2"
-                          fontWeight={500}
-                          noWrap
-                          sx={{ maxWidth: 300 }}
-                        >
-                          {a.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          {a.size}
-                        </Typography>
-                      </Stack>
                       <Tooltip title="Remove">
                         <IconButton
                           size="small"
-                          onClick={() => removeAttachment(a.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeAttachment(a.id);
+                          }}
                           sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            width: 24,
+                            height: 24,
                             color: "text.disabled",
-                            "&:hover": { color: "error.main" },
+                            bgcolor: "background.paper",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { color: "error.main", bgcolor: "background.paper" },
                           }}
                         >
-                          <Close fontSize="small" />
+                          <Close sx={{ fontSize: 14 }} />
                         </IconButton>
                       </Tooltip>
+
+                      <Stack alignItems="center" justifyContent="center" sx={{ mt: 2.5, mb: 1.5 }}>
+                        <AttachFile
+                          sx={{ fontSize: 34, color: "primary.main" }}
+                        />
+                      </Stack>
+
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: "text.primary",
+                            wordBreak: "break-word",
+                            whiteSpace: "normal",
+                            lineHeight: 1.25,
+                          }}
+                          title={a.name}
+                        >
+                          {a.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {a.size}
+                        </Typography>
+                      </Box>
                     </Stack>
                   ))}
-                </Stack>
-              )}
+                  </Stack>
+                )}
+              </Box>
             </Box>
 
             {/* ── Divider ── */}

@@ -411,7 +411,9 @@ const TaskTable = ({
                               height: 22,
                               bgcolor: pStyle.bg,
                               color: pStyle.color,
-                              border: "none",
+                              border: "1px solid",
+                              borderColor: pStyle.dot,
+                              borderRadius: 0.5,
                               "& .MuiChip-label": { px: 1 },
                             }}
                           />

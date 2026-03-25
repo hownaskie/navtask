@@ -61,10 +61,10 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     [],
   );
 
-  const updateTask = async (id: number, taskData: UpdateTaskRequest) => {
+  const updateTask = async (id: number, taskData: UpdateTaskRequest, images?: File[]) => {
     try {
       setUpdateTaskLoading(true);
-      await taskApi.update(id, taskData);
+      await taskApi.update(id, taskData, images);
       return true;
     } catch (err) {
       console.error("Error updating task:", err);
@@ -107,6 +107,16 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     }
   };
 
+  const deleteAttachment = async (taskId: number, attachmentId: number) => {
+    try {
+      await taskApi.deleteAttachment(taskId, attachmentId);
+      return true;
+    } catch (err) {
+      console.error("Error deleting attachment:", err);
+      return false;
+    }
+  };
+
   return {
     tasks,
     loading,
@@ -117,6 +127,7 @@ export const useTask = ({ autoFetch = false }: UseTaskOptions = {}) => {
     deleteTask,
     deleteTasks,
     deleteTaskLoading,
+    deleteAttachment,
     getTaskById,
   };
 };
