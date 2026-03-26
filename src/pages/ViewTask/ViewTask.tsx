@@ -39,6 +39,11 @@ type TaskSubtaskView = {
   status: "Not Done" | "Done";
 };
 
+const SUBTASK_STATUS_COLORS = {
+  "Not Done": STATUS_COLORS["Not Started"],
+  Done: STATUS_COLORS.Completed,
+};
+
 type TaskDetails = {
   id: number;
   title: string;
@@ -269,11 +274,11 @@ const ViewTask = () => {
             <Box>
               <SectionLabel>Due Date</SectionLabel>
               <Stack direction="row" alignItems="center" spacing={0.75}>
-                <CalendarToday sx={{ fontSize: 14, color: "warning.main" }} />
+                <CalendarToday sx={{ fontSize: 14, color: "text.disabled" }} />
                 <Typography
                   sx={{
                     fontSize: "0.875rem",
-                    color: "warning.main",
+                    color: "text.secondary",
                     fontWeight: 500,
                   }}
                 >
@@ -283,37 +288,15 @@ const ViewTask = () => {
             </Box>
           </Stack>
 
-          {/* Details fieldset */}
-          <Box
-            component="fieldset"
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: "12px",
-              px: 2,
-              pt: 0.5,
-              pb: 2,
-              mb: 3,
-              legend: { px: 0.75, ml: 0.5, mr: "auto" },
-            }}
-          >
-            <legend>
-              <Typography
-                sx={{
-                  fontSize: "0.82rem",
-                  fontWeight: 400,
-                  color: "text.secondary",
-                }}
-              >
-                Details
-              </Typography>
-            </legend>
+          {/* Details */}
+          <Box sx={{ mb: 3 }}>
+            <SectionLabel>Details</SectionLabel>
             <Typography
               sx={{
                 fontSize: "0.875rem",
                 color: "text.secondary",
                 lineHeight: 1.7,
-                mt: 0.5,
+                mt: 0.25,
               }}
             >
               {task.details}
@@ -361,50 +344,56 @@ const ViewTask = () => {
               </Typography>
             </Stack>
 
-            <Stack spacing={0.75}>
-              {subtasks.map((taskItem) => (
-                <Stack
-                  key={taskItem.id}
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    px: 1.5,
-                    py: 1,
-                    borderRadius: "10px",
-                    border: "1px solid",
-                    borderColor:
-                      taskItem.status === "Done"
-                        ? "rgba(34,197,94,0.2)"
-                        : "divider",
-                    bgcolor:
-                      taskItem.status === "Done"
-                        ? "rgba(34,197,94,0.03)"
-                        : "background.paper",
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1.25}>
-                    <Typography
-                      sx={{
-                        fontSize: "0.875rem",
-                        fontWeight: 500,
-                        color:
-                          taskItem.status === "Done"
-                            ? "text.disabled"
-                            : "text.primary",
-                        textDecoration:
-                          taskItem.status === "Done"
-                            ? "line-through"
-                            : "none",
-                      }}
-                    >
-                      {taskItem.title}
-                    </Typography>
+            {subtasks.length === 0 ? (
+              <Typography sx={{ fontSize: "0.875rem", color: "text.disabled" }}>
+                No subtasks yet.
+              </Typography>
+            ) : (
+              <Stack spacing={0.75}>
+                {subtasks.map((taskItem) => (
+                  <Stack
+                    key={taskItem.id}
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: "10px",
+                      border: "1px solid",
+                      borderColor:
+                        taskItem.status === "Done"
+                          ? "rgba(34,197,94,0.2)"
+                          : "divider",
+                      bgcolor:
+                        taskItem.status === "Done"
+                          ? "rgba(34,197,94,0.03)"
+                          : "background.paper",
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1.25}>
+                      <Typography
+                        sx={{
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color:
+                            taskItem.status === "Done"
+                              ? "text.disabled"
+                              : "text.primary",
+                          textDecoration:
+                            taskItem.status === "Done"
+                              ? "line-through"
+                              : "none",
+                        }}
+                      >
+                        {taskItem.title}
+                      </Typography>
+                    </Stack>
+                    <StatusChip value={taskItem.status} map={SUBTASK_STATUS_COLORS} />
                   </Stack>
-                  <StatusChip value={taskItem.status} map={STATUS_COLORS} />
-                </Stack>
-              ))}
-            </Stack>
+                ))}
+              </Stack>
+            )}
           </Box>
         </Box>
       </Box>

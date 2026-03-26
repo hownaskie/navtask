@@ -424,6 +424,7 @@ const TaskTable = ({
                             status={statusLabelMap[task.status]}
                             completed={progressCompleted}
                             total={progressTotal}
+                            dateLayout="vertical"
                             statusDate={
                               task.status === "COMPLETED" && task.completedDate
                                 ? formatDate(task.completedDate)

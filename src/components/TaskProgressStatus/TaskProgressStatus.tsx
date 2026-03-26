@@ -6,6 +6,7 @@ interface TaskProgressStatusProps {
   completed: number;
   total: number;
   statusDate?: string;
+  dateLayout?: "inline" | "vertical";
 }
 
 const TaskProgressStatus = ({
@@ -13,9 +14,11 @@ const TaskProgressStatus = ({
   completed,
   total,
   statusDate,
+  dateLayout = "inline",
 }: TaskProgressStatusProps) => {
   const progress = total > 0 ? (completed / total) * 100 : 0;
   const isCancelled = status === "Cancelled";
+  const isVerticalDateLayout = dateLayout === "vertical";
 
   return (
     <Stack direction="row" alignItems="center" spacing={0.75} gap={1.5}>
@@ -57,7 +60,11 @@ const TaskProgressStatus = ({
           />
         )}
       </Box>
-      <Stack spacing={0.15}>
+      <Stack
+        direction={isVerticalDateLayout ? "column" : "row"}
+        alignItems={isVerticalDateLayout ? "flex-start" : "center"}
+        spacing={isVerticalDateLayout ? 0.1 : 1}
+      >
         <Typography
           sx={{
             fontSize: "0.78rem",
@@ -68,6 +75,19 @@ const TaskProgressStatus = ({
         >
           {status}
         </Typography>
+        {statusDate && !isVerticalDateLayout && (
+          <Typography
+            sx={{
+              fontSize: "1rem",
+              color: "text.secondary",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              mx: 0.2,
+            }}
+          >
+            •
+          </Typography>
+        )}
         {statusDate && (
           <Typography
             sx={{
