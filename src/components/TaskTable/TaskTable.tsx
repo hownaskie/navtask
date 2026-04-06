@@ -31,7 +31,11 @@ import { PRIORITY_COLORS } from "../../constants/colors";
 import { priorityLabelMap, statusLabelMap } from "../../constants/task";
 import type { SortDir, SortKey } from "../../types/dashboard";
 import type { TaskResponse } from "../../interfaces/task";
-import { formatDate, getDueDateColor, getTaskProgress, isDueToday } from "../../utils";
+import {
+  formatDate,
+  getDueDateMeta,
+  getTaskProgress,
+} from "../../utils";
 import TaskTableSkeleton from "../TaskTableSkeleton";
 import TaskProgressStatus from "../TaskProgressStatus/TaskProgressStatus";
 
@@ -268,7 +272,7 @@ const TaskTable = ({
                 paginated.map((task, idx) => {
                   const isSelected = selectedIds.has(task.id);
                   const isDone = task.status === "COMPLETED";
-                  const dueToday = isDueToday(task.dueDate);
+                  const dueDateMeta = getDueDateMeta(task.dueDate);
                   const hasSubtasks = task.subtasks.length > 0;
                   const isExpanded = expandedTaskIds.has(task.id);
                   const { completed: progressCompleted, total: progressTotal } =
@@ -381,7 +385,7 @@ const TaskTable = ({
                           <Stack spacing={0.15}>
                             <Typography
                               variant="body2"
-                              color={getDueDateColor(task.dueDate)}
+                              color={dueDateMeta.color}
                               fontWeight={task.dueDate ? 500 : 400}
                               fontSize="0.82rem"
                             >
@@ -389,13 +393,13 @@ const TaskTable = ({
                                 ? formatDate(task.dueDate)
                                 : "No due date"}
                             </Typography>
-                            {dueToday && (
+                            {dueDateMeta.label && (
                               <Typography
                                 variant="caption"
-                                color="#0591a1"
-                                sx={{ fontWeight: 600, lineHeight: 1.2 }}
+                                color={dueDateMeta.labelColor}
+                                sx={{ fontWeight: dueDateMeta.label === "Overdue" ? 700 : 600, lineHeight: 1.2 }}
                               >
-                                Today
+                                {dueDateMeta.label}
                               </Typography>
                             )}
                           </Stack>

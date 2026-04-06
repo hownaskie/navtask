@@ -81,8 +81,11 @@ const Signup = () => {
       setSuccessMessage("Account created successfully. Please sign in to continue.");
       setPassword("");
       setPasswordTouched(false);
-    } catch {
-      setError("Unable to create account. Please check your details.");
+    } catch (err) {
+      const message = err instanceof Error
+        ? err.message
+        : "Unable to create account. Please check your details.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -141,7 +144,7 @@ const Signup = () => {
               <TextField
                 label="Username"
                 type="text"
-                placeholder="jane@example.com"
+                placeholder="Enter your username"
                 fullWidth
                 value={username}
                 error={Boolean(usernameError)}

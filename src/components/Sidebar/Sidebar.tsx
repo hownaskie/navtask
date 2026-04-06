@@ -62,9 +62,9 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
 
   const handleLogout = () => setOpenDialog(true);
 
-  const handleOnConfirmLogout = () => {
+  const handleOnConfirmLogout = async () => {
     setOpenDialog(false);
-    logout();
+    await logout();
     navigate("/login", { replace: true });
   };
 

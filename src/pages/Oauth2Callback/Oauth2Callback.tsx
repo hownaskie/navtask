@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/useAuthContext";
 import { authApi } from "../../services/api";
+import { clearToken, saveToken } from "../../utils/tokenStorage";
 
 export default function OAuth2CallbackPage() {
   const [params] = useSearchParams();
@@ -20,7 +21,7 @@ export default function OAuth2CallbackPage() {
       return;
     }
 
-    localStorage.setItem("navtask_token", token);
+    saveToken(token);
 
     authApi
       .me()
@@ -29,7 +30,7 @@ export default function OAuth2CallbackPage() {
         navigate("/dashboard", { replace: true });
       })
       .catch(() => {
-        localStorage.removeItem("navtask_token");
+        clearToken();
         navigate("/login?error=Failed to authenticate", { replace: true });
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

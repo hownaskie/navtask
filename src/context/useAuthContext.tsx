@@ -6,17 +6,25 @@ import {
   useCallback,
   type ReactNode
 } from 'react'
-import { isAxiosError } from 'axios'
-import { authApi } from '../services/api'
-import { clearToken } from '../utils/tokenStorage'
+import { ApiError, authApi } from '../services/api'
+import { clearToken, getToken, saveToken } from '../utils/tokenStorage'
 import type { ApiResponse, User } from '../interfaces/auth'
+
+const isApiResponse = (value: unknown): value is ApiResponse<unknown> => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'message' in value &&
+    typeof (value as { message: unknown }).message === 'string'
+  )
+}
 
 interface AuthContextValue {
   user: User | null
   loading: boolean
   login: (username: string, password: string) => Promise<User>
   register: (username: string, password: string) => Promise<User>
-  logout: () => void
+  logout: () => Promise<void>
   loginWithToken: (token: string) => void
 }
 
@@ -26,20 +34,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const hydrateFromRefresh = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await authApi.refresh()
+      const { token, user } = res.data.data
+      saveToken(token)
+      setUser(user)
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
   const loadUser = useCallback(async () => {
-    const token = localStorage.getItem('navtask_token')
-    if (!token) { setLoading(false); return }
+    const token = getToken()
+    if (!token) {
+      await hydrateFromRefresh()
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await authApi.me()
       setUser(res.data.data)
     } catch (err) {
-      if (isAxiosError(err) && err.response?.status === 401) {
-        clearToken()
+      if (err instanceof ApiError && err.status === 401) {
+        const hydrated = await hydrateFromRefresh()
+        if (!hydrated) {
+          clearToken()
+        }
       }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [hydrateFromRefresh])
 
   useEffect(() => { loadUser() }, [loadUser])
 
@@ -47,12 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.login({ username, password })
       const { token, user } = res.data.data
-      localStorage.setItem('navtask_token', token)
+      saveToken(token)
       setUser(user)
       return user
     } catch (error) {
-      if (isAxiosError<ApiResponse<unknown>>(error)) {
-        const message = error.response?.data?.message
+      if (error instanceof ApiError && isApiResponse(error.data)) {
+        const message = error.data.message
         throw new Error(message || 'Unable to sign in. Please check your credentials.')
       }
 
@@ -64,36 +92,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     password: string
   ): Promise<User> => {
-    const normalized = username.trim().toLowerCase()
-    const [localPart = "user"] = normalized.split("@")
-    const [firstNameRaw, secondNameRaw] = localPart
-      .split(/[._-]+/)
-      .filter(Boolean)
+    try {
+      const normalized = username.trim().toLowerCase()
+      const [localPart = "user"] = normalized.split("@")
+      const [firstNameRaw, secondNameRaw] = localPart
+        .split(/[._-]+/)
+        .filter(Boolean)
 
-    const firstName = firstNameRaw
-      ? firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1)
-      : "User"
-    const lastName = secondNameRaw
-      ? secondNameRaw.charAt(0).toUpperCase() + secondNameRaw.slice(1)
-      : "User"
+      const firstName = firstNameRaw
+        ? firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1)
+        : "User"
+      const lastName = secondNameRaw
+        ? secondNameRaw.charAt(0).toUpperCase() + secondNameRaw.slice(1)
+        : "User"
 
-    const res = await authApi.register({
-      firstName,
-      lastName,
-      email: normalized,
-      password,
-    })
-    const { user } = res.data.data
-    return user
+      const res = await authApi.register({
+        firstName,
+        lastName,
+        email: normalized,
+        password,
+      })
+      const { user } = res.data.data
+      return user
+    } catch (error) {
+      if (error instanceof ApiError && isApiResponse(error.data)) {
+        const message = error.data.message
+        throw new Error(message || 'Unable to create account. Please check your details.')
+      }
+
+      throw new Error('Unable to create account. Please check your details.')
+    }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // Always clear local session even if server-side cookie cleanup fails.
+    }
     clearToken()
     setUser(null)
   }
 
   const loginWithToken = (token: string) => {
-    localStorage.setItem('navtask_token', token)
+    saveToken(token)
     loadUser()
   }
 
@@ -106,6 +148,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+  if (!ctx) {
+    return {
+      user: null,
+      loading: false,
+      login: async () => {
+        throw new Error('AuthProvider is not mounted')
+      },
+      register: async () => {
+        throw new Error('AuthProvider is not mounted')
+      },
+      logout: async () => {},
+      loginWithToken: () => {},
+    }
+  }
   return ctx
 }
