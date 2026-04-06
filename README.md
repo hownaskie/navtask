@@ -11,7 +11,7 @@ NavTask lets users authenticate, create/update tasks, manage subtasks and attach
 - Vite
 - Material UI (`@mui/material`, `@mui/icons-material`)
 - React Router
-- Axios
+- ~~Axios~~
 - ESLint (flat config)
 
 ## Features
