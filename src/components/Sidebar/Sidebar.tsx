@@ -52,9 +52,10 @@ const MobileMenuButton = ({ onClick }: { onClick: () => void }) => (
 interface ContentProps {
   darkMode: boolean;
   onToggleDark: () => void;
+  isMobile?: boolean;
 }
 
-const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
+const SidebarContent = ({ darkMode, onToggleDark, isMobile = false }: ContentProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -91,14 +92,20 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
             width: 36,
             height: 36,
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+            background: isMobile
+              ? "transparent"
+              : "linear-gradient(135deg, #1D4ED8, #3B82F6)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
           }}
         >
-          <NavtaskIcon width={36} height={36} color="white" />
+          {isMobile ? (
+            <NavtaskIcon width={32} height={32} />
+          ) : (
+            <NavtaskIcon width={36} height={36} />
+          )}
         </Box>
         <Typography
           sx={{
@@ -106,7 +113,7 @@ const SidebarContent = ({ darkMode, onToggleDark }: ContentProps) => {
             fontWeight: 700,
             fontSize: "0.95rem",
             letterSpacing: "0.1em",
-            color: "text.primary",
+            color: "primary.main",
           }}
         >
           NAVTASK
@@ -362,7 +369,7 @@ const Sidebar = ({
         },
       }}
     >
-      <SidebarContent darkMode={darkMode} onToggleDark={onToggleDark} />
+      <SidebarContent darkMode={darkMode} onToggleDark={onToggleDark} isMobile />
     </Drawer>
   </>
 );

@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
-import { ArrowBackIos, TaskAlt } from "@mui/icons-material";
+import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "../../context/useAuthContext";
 import Breadcrumbs from "../Breadcrumbs";
 import type { BreadcrumbState } from "../Breadcrumbs";
 import { Sidebar, MobileMenuButton, SIDEBAR_WIDTH } from "../Sidebar";
 import { getTheme } from "../../utils/theme";
+import NavtaskIcon from "../NavTaskIcon";
 
 /**
  * Shared layout for all protected routes.
@@ -92,13 +93,14 @@ const ProtectedLayout = () => {
                     width: 30,
                     height: 30,
                     borderRadius: "8px",
-                    background: "linear-gradient(135deg,#1D4ED8,#3B82F6)",
+                    bgcolor: "primary.main",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <TaskAlt sx={{ color: "white", fontSize: 17 }} />
+                  <NavtaskIcon width={22} height={22} />
                 </Box>
                 <Typography
                   variant="h6"

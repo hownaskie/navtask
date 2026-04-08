@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import NavtaskIcon from "../NavTaskIcon";
+import { NavtaskLogoNew } from "../../assets";
 
 interface BrandPanelProps {
   subtitle?: string;
@@ -71,7 +72,12 @@ const BrandPanel: FC<BrandPanelProps> = () => (
             flexShrink: 0,
           }}
         >
-          <NavtaskIcon width={50} height={50} color="white" />
+          <Box
+            component="img"
+            src={NavtaskLogoNew}
+            alt="NavTask logo"
+            sx={{ width: 50, height: 50, objectFit: "contain" }}
+          />
         </Box>
 
         <Stack direction="column" spacing={0.25}>
