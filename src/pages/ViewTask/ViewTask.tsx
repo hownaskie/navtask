@@ -224,6 +224,7 @@ const ViewTask = () => {
               <Tooltip title="Edit">
                 <IconButton
                   size="small"
+                  disabled={task.status === "Cancelled"}
                   onClick={() =>
                     navigate(`/edit/${task.id}`, {
                       state: {

@@ -441,6 +441,7 @@ const TaskTable = ({
                           <IconButton
                             className="row-edit"
                             size="small"
+                            disabled={task.status === "CANCELLED"}
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditTask(task.id);

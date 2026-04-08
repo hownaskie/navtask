@@ -133,18 +133,14 @@ const Signup = () => {
               </Typography>
             </Stack>
 
-            <Typography variant="h4" gutterBottom>
+            <Typography variant="h4" gutterBottom mb={4}>
               Create account
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={4}>
-              Start organizing your life today — it's free
             </Typography>
 
             <Stack spacing={2.5}>
               <TextField
                 label="Username"
                 type="text"
-                placeholder="Enter your username"
                 fullWidth
                 value={username}
                 error={Boolean(usernameError)}
@@ -163,7 +159,6 @@ const Signup = () => {
               <TextField
                 label="Password"
                 type="password"
-                placeholder="Min. 8 characters"
                 fullWidth
                 value={password}
                 error={Boolean(passwordError)}

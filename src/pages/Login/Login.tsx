@@ -95,11 +95,8 @@ const Login = () => {
               </Typography>
             </Stack>
 
-            <Typography variant="h4" gutterBottom>
-              Welcome back
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={4}>
-              Sign in to your account to continue
+            <Typography variant="h4" gutterBottom mb={4}>
+              Sign In
             </Typography>
 
             <Stack spacing={2.5}>

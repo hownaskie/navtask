@@ -585,6 +585,12 @@ const EditTask = () => {
                   const nextStatus = e.target.value as Exclude<Status, "All">;
                   setStatus(nextStatus);
 
+                  if (nextStatus === "Not Started" || nextStatus === "In Progress") {
+                    setSubtasks((prev) =>
+                      prev.map((subtask) => ({ ...subtask, status: "NOT_STARTED" })),
+                    );
+                  }
+
                   if (nextStatus !== "Completed") {
                     setCompletionDate(null);
                     setPendingCompletionConfirmation(false);
