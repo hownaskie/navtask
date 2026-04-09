@@ -108,8 +108,8 @@ const AlertDialog = (props: AlertDialogProps) => {
       <DialogContent
         sx={
           isWarning
-            ? { p: 0, textAlign: "center", position: "relative", pt: 0.5 }
-            : undefined
+            ? { p: 0, textAlign: "center", position: "relative", pt: 0.5, overflow: "hidden" }
+            : { overflow: "hidden"}
         }
       >
         {isWarning && (
