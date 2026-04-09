@@ -98,6 +98,10 @@ const AddTask = () => {
   const minDueDate = getMinDueDateString();
   const isTitleEmptyAfterInput = titleHadValue && !title.trim();
   const isDueDateEmptyAfterInput = dueDateHadValue && !dueDate;
+  const pendingDeleteSubtaskDescription =
+    pendingDeleteSubtaskId === null
+      ? ""
+      : subtasks.find((subtask) => subtask.id === pendingDeleteSubtaskId)?.title.trim() ?? "";
   const hasInvalidTouchedSubtask = subtasks.some(
     (subtask) =>
       (subtaskValidationTriggered || touchedSubtaskIds.has(subtask.id)) &&
@@ -888,8 +892,8 @@ const AddTask = () => {
       </Snackbar>
       <AlertDialog
         open={pendingDeleteSubtaskId !== null}
-        title="Delete subtask?"
-        content="Are you sure you want to delete this subtask?"
+        title="Delete this Subtask?"
+        content={pendingDeleteSubtaskDescription || "This subtask has no description."}
         variant="warning"
         leftButtonText="Delete"
         rightButtonText="Cancel"

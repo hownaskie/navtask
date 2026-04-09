@@ -124,6 +124,10 @@ const EditTask = () => {
       !subtask.title.trim(),
   );
   const canMarkAsComplete = pendingCompletionConfirmation;
+  const pendingDeleteSubtaskDescription =
+    pendingDeleteSubtaskKey === null
+      ? ""
+      : subtasks.find((subtask) => subtask.key === pendingDeleteSubtaskKey)?.title.trim() ?? "";
   const isSaveDisabled =
     !isDueDateValid ||
     !details.trim() ||
@@ -1139,11 +1143,12 @@ const EditTask = () => {
       </Snackbar>
       <AlertDialog
         open={pendingDeleteSubtaskKey !== null}
-        title="Delete subtask?"
-        content="Are you sure you want to delete this subtask?"
+        title="Delete this Subtask?"
+        content={pendingDeleteSubtaskDescription || "This subtask has no description."}
         variant="warning"
         leftButtonText="Delete"
         rightButtonText="Cancel"
+        confirmButtonPosition="right"
         onClose={() => setPendingDeleteSubtaskKey(null)}
         onConfirm={confirmRemoveSubtask}
       />
