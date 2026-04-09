@@ -174,7 +174,7 @@ const DashboardToolbar = ({
           fontSize: "0.85rem",
         }}
       >
-        Add Task
+        New Task
       </Button>
     </Paper>
   );

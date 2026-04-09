@@ -1,3 +1,5 @@
+import type { TaskPriority, TaskStatus } from "../types/auth";
+
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_PREFIX_PATTERN = /^\d{4}-\d{2}-\d{2}/;
 
@@ -24,7 +26,7 @@ const toDateKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-type DueDateLabel = "Overdue" | "Today" | null;
+type DueDateLabel = "Overdue" | "Today" | "Tomorrow" | null;
 
 export interface DueDateMeta {
   isDueToday: boolean;
@@ -55,7 +57,14 @@ const DEFAULT_DUE_DATE_META: DueDateMeta = {
   labelColor: "text.secondary",
 };
 
-export const getDueDateMeta = (dueDate: string | null): DueDateMeta => {
+const isIncomplete = (status?: TaskStatus): boolean =>
+  status !== "COMPLETED" && status !== "CANCELLED";
+
+export const getDueDateMeta = (
+  dueDate: string | null,
+  priority?: TaskPriority,
+  status?: TaskStatus,
+): DueDateMeta => {
   if (!dueDate) {
     return DEFAULT_DUE_DATE_META;
   }
@@ -67,16 +76,6 @@ export const getDueDateMeta = (dueDate: string | null): DueDateMeta => {
 
   const { todayKey, tomorrowKey } = getDateKeyContext();
 
-  if (dueKey === todayKey) {
-    return {
-      isDueToday: true,
-      isOverdue: false,
-      color: "#0591a1",
-      label: "Today",
-      labelColor: "#0591a1",
-    };
-  }
-
   if (dueKey < todayKey) {
     return {
       isDueToday: false,
@@ -87,7 +86,29 @@ export const getDueDateMeta = (dueDate: string | null): DueDateMeta => {
     };
   }
 
+  if (dueKey === todayKey) {
+    if (isIncomplete(status)) {
+      return {
+        isDueToday: true,
+        isOverdue: false,
+        color: "#0591a1",
+        label: "Today",
+        labelColor: "#0591a1",
+      };
+    }
+    return { ...DEFAULT_DUE_DATE_META, isDueToday: true };
+  }
+
   if (dueKey === tomorrowKey) {
+    if (priority === "CRITICAL" && isIncomplete(status)) {
+      return {
+        isDueToday: false,
+        isOverdue: false,
+        color: "#0591a1",
+        label: "Tomorrow",
+        labelColor: "#0591a1",
+      };
+    }
     return {
       isDueToday: false,
       isOverdue: false,

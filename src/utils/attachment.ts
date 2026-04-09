@@ -37,3 +37,42 @@ export const getAttachmentUrl = (url: string): string => {
 
   return url;
 };
+
+export const formatFileSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return "-";
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${bytes} B`;
+};
+
+export const resolveAttachmentSize = async (url: string): Promise<string> => {
+  try {
+    const headResponse = await fetch(url, { method: "HEAD" });
+    if (headResponse.ok) {
+      const contentLengthHeader = headResponse.headers.get("content-length");
+      const contentLength = contentLengthHeader ? Number(contentLengthHeader) : NaN;
+      if (!Number.isNaN(contentLength)) {
+        return formatFileSize(contentLength);
+      }
+    }
+
+    const getResponse = await fetch(url);
+    if (!getResponse.ok) {
+      return "-";
+    }
+
+    const fileBlob = await getResponse.blob();
+    return formatFileSize(fileBlob.size);
+  } catch {
+    return "-";
+  }
+};

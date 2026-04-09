@@ -23,7 +23,13 @@ import SectionLabel from "../../components/SectionLabel";
 import AlertDialog from "../../components/AlertDialog";
 import AttachmentCard from "../../components/AttachmentCard";
 import { useTask } from "../../hooks/useTask";
-import { getTaskProgressByStatus, getAttachmentName, getAttachmentType, getAttachmentUrl } from "../../utils";
+import {
+  getTaskProgressByStatus,
+  getAttachmentName,
+  getAttachmentType,
+  getAttachmentUrl,
+  resolveAttachmentSize,
+} from "../../utils";
 import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
 import type { Priority, Status } from "../../types/dashboard";
 import { priorityLabelMap, statusLabelMap } from "../../constants/task";
@@ -65,6 +71,7 @@ const ViewTask = () => {
 
   const [task, setTask] = useState<TaskDetails | null>(null);
   const [subtasks, setSubtasks] = useState<TaskSubtaskView[]>([]);
+  const [attachmentSizes, setAttachmentSizes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
@@ -116,6 +123,37 @@ const ViewTask = () => {
 
     void fetchTask();
   }, [getTaskById, id]);
+
+  useEffect(() => {
+    if (!task || task.attachments.length === 0) {
+      setAttachmentSizes({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(
+      task.attachments.map(async (attachment) => {
+        const attachmentUrl = getAttachmentUrl(attachment.attachmentUrl);
+        const size = await resolveAttachmentSize(attachmentUrl);
+        return { id: attachment.id, size };
+      }),
+    ).then((results) => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextSizes: Record<number, string> = {};
+      results.forEach(({ id: attachmentId, size }) => {
+        nextSizes[attachmentId] = size;
+      });
+      setAttachmentSizes(nextSizes);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [task]);
 
   const handleConfirmDelete = async () => {
     if (!task) return;
@@ -322,6 +360,7 @@ const ViewTask = () => {
                       fileName={fileName}
                       attachmentUrl={attachmentUrl}
                       attachmentType={attachmentType}
+                      attachmentSize={attachmentSizes[attachment.id]}
                     />
                   );
                 })}

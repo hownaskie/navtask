@@ -24,6 +24,29 @@ export const getMinDueDateString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
+export const getNextDateString = (isoDate: string): string => {
+  if (!isoDate) {
+    return getMinDueDateString();
+  }
+
+  const [yearStr, monthStr, dayStr] = isoDate.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  if (!year || !month || !day) {
+    return getMinDueDateString();
+  }
+
+  const next = new Date(year, month - 1, day);
+  next.setDate(next.getDate() + 1);
+
+  const nextYear = String(next.getFullYear());
+  const nextMonth = String(next.getMonth() + 1).padStart(2, "0");
+  const nextDay = String(next.getDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+};
+
 export const isDueDateAfterToday = (dueDate: string): boolean => {
   if (!dueDate) {
     return false;
@@ -73,6 +96,40 @@ export const validatePassword = (password: string): string | null => {
   if (password.length < 6)
     return "Password must be at least 6 characters.";
   return null;
+};
+
+export interface SignupPasswordRuleState {
+  hasMinLength: boolean;
+  hasNumberOrSymbol: boolean;
+  excludesNameOrEmail: boolean;
+  isStrongPassword: boolean;
+}
+
+export const getSignupPasswordRuleState = (
+  username: string,
+  password: string
+): SignupPasswordRuleState => {
+  const normalizedPassword = password.toLowerCase();
+  const normalizedUsername = username.trim().toLowerCase();
+  const [localPart = "", domainPart = ""] = normalizedUsername.split("@");
+
+  const hasMinLength = password.length >= 8;
+  const hasNumberOrSymbol = /[0-9!#()_-]/.test(password);
+  const excludesNameOrEmail =
+    !normalizedPassword.includes(normalizedUsername) &&
+    (!localPart || !normalizedPassword.includes(localPart)) &&
+    (!domainPart || !normalizedPassword.includes(domainPart));
+
+  return {
+    hasMinLength,
+    hasNumberOrSymbol,
+    excludesNameOrEmail,
+    isStrongPassword:
+      password.length > 0 &&
+      hasMinLength &&
+      hasNumberOrSymbol &&
+      excludesNameOrEmail,
+  };
 };
 
 export const validateUsername = (username: string): string | null => {

@@ -272,7 +272,7 @@ const TaskTable = ({
                 paginated.map((task, idx) => {
                   const isSelected = selectedIds.has(task.id);
                   const isDone = task.status === "COMPLETED";
-                  const dueDateMeta = getDueDateMeta(task.dueDate);
+                  const dueDateMeta = getDueDateMeta(task.dueDate, task.priority, task.status);
                   const hasSubtasks = task.subtasks.length > 0;
                   const isExpanded = expandedTaskIds.has(task.id);
                   const { completed: progressCompleted, total: progressTotal } =

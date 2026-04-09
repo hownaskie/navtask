@@ -43,9 +43,11 @@ import {
 } from "../../constants/taskForm";
 import type { TaskStatus } from "../../types/auth";
 import {
+  TITLE_MAX_LENGTH,
   DETAILS_MAX_LENGTH,
-  getMinDueDateString,
-  isDueDateAfterToday,
+  formatFileSize,
+  resolveAttachmentSize,
+  getNextDateString,
 } from "../../utils";
 import AlertDialog from "../../components/AlertDialog";
 import { buildBreadcrumbTrail } from "../../components/Breadcrumbs";
@@ -64,45 +66,6 @@ interface Attachment {
   url?: string;
   file?: File;
 }
-
-const formatFileSize = (bytes: number) => {
-  if (!Number.isFinite(bytes) || bytes < 0) {
-    return "-";
-  }
-
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  }
-
-  if (bytes >= 1024) {
-    return `${Math.round(bytes / 1024)} KB`;
-  }
-
-  return `${bytes} B`;
-};
-
-const resolveAttachmentSize = async (url: string): Promise<string> => {
-  try {
-    const headResponse = await fetch(url, { method: "HEAD" });
-    if (headResponse.ok) {
-      const contentLengthHeader = headResponse.headers.get("content-length");
-      const contentLength = contentLengthHeader ? Number(contentLengthHeader) : NaN;
-      if (!Number.isNaN(contentLength)) {
-        return formatFileSize(contentLength);
-      }
-    }
-
-    const getResponse = await fetch(url);
-    if (!getResponse.ok) {
-      return "-";
-    }
-
-    const fileBlob = await getResponse.blob();
-    return formatFileSize(fileBlob.size);
-  } catch {
-    return "-";
-  }
-};
 
 // ── Section label ─────────────────────────────────────────────────────────────
 const SectionLabel = ({ children }: { children: string }) => (
@@ -153,7 +116,8 @@ const EditTask = () => {
   const [initialAttachmentIds, setInitialAttachmentIds] = useState<Set<number>>(
     new Set(),
   );
-  const minDueDate = getMinDueDateString();
+  const minDueDate = getNextDateString(dateCreated);
+  const isDueDateValid = Boolean(dueDate) && dueDate > dateCreated;
   const hasInvalidTouchedSubtask = subtasks.some(
     (subtask) =>
       (subtaskValidationTriggered || touchedSubtaskKeys.has(subtask.key)) &&
@@ -161,7 +125,7 @@ const EditTask = () => {
   );
   const canMarkAsComplete = pendingCompletionConfirmation;
   const isSaveDisabled =
-    !isDueDateAfterToday(dueDate) ||
+    !isDueDateValid ||
     !details.trim() ||
     hasInvalidTouchedSubtask ||
     updateTaskLoading;
@@ -363,7 +327,7 @@ const EditTask = () => {
       return false;
     }
 
-    if (!isDueDateAfterToday(dueDate)) {
+    if (!isDueDateValid) {
       setSaveErrorSnackbar("must be later than Date Created");
       return false;
     }
@@ -678,6 +642,12 @@ const EditTask = () => {
                   value={title}
                 />
               </FormControl>
+              <Typography
+                variant="caption"
+                sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
+              >
+                {title.length}/{TITLE_MAX_LENGTH}
+              </Typography>
             </Box>
 
             {/* ── Row 2: Date Created + Due Date ── */}

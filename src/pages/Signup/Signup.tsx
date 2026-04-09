@@ -7,7 +7,9 @@ import {
   TextField,
   Button,
   LinearProgress,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
 import AlertMessage from "../../components/AlertMessage";
@@ -15,6 +17,7 @@ import { useState } from "react";
 import { useAuth } from "../../context/useAuthContext";
 import {
   validateUsername,
+  getSignupPasswordRuleState,
 } from "../../utils";
 import { authApi } from "../../services/api";
 
@@ -23,41 +26,37 @@ const Signup = () => {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [usernameExists, setUsernameExists] = useState(false);
 
-  const normalizedPassword = password.toLowerCase();
-  const normalizedUsername = username.trim().toLowerCase();
-  const [localPart = "", domainPart = ""] = normalizedUsername.split("@");
-
-  const hasMinLength = password.length >= 8;
-  const hasNumberOrSymbol = /[0-9]|[^A-Za-z0-9]/.test(password);
-  const excludesNameOrEmail =
-    !normalizedPassword.includes(normalizedUsername) &&
-    (!localPart || !normalizedPassword.includes(localPart)) &&
-    (!domainPart || !normalizedPassword.includes(domainPart));
-  const isStrongPassword =
-    password.length > 0 &&
-    hasMinLength &&
-    hasNumberOrSymbol &&
-    excludesNameOrEmail;
+  const {
+    hasMinLength,
+    hasNumberOrSymbol,
+    excludesNameOrEmail,
+    isStrongPassword,
+  } = getSignupPasswordRuleState(username, password);
 
   const usernameError =
     usernameTouched && !username.trim()
       ? "Username is required"
+      : usernameTouched && usernameExists
+        ? "Username already exists"
       : usernameTouched
         ? (validateUsername(username) ?? "")
         : "";
   const passwordError =
     passwordTouched && (!hasMinLength || !hasNumberOrSymbol)
-      ? "Password must be at least 8 characters and include a number or symbol"
+        ? "Password must be at least 8 characters and include a number or symbol"
       : "";
 
   const canSubmit =
     Boolean(username.trim()) &&
+    !usernameExists &&
     !validateUsername(username) &&
     hasMinLength &&
     hasNumberOrSymbol &&
@@ -79,12 +78,21 @@ const Signup = () => {
       setLoading(true);
       await register(username.trim(), password);
       setSuccessMessage("Account created successfully. Please sign in to continue.");
+      setUsername("");
       setPassword("");
+      setUsernameTouched(false);
       setPasswordTouched(false);
+      setUsernameExists(false);
     } catch (err) {
       const message = err instanceof Error
         ? err.message
         : "Unable to create account. Please check your details.";
+
+      if (message.toLowerCase().includes("already exists")) {
+        setUsernameExists(true);
+        setUsernameTouched(true);
+      }
+
       setError(message);
     } finally {
       setLoading(false);
@@ -147,6 +155,7 @@ const Signup = () => {
                 helperText={usernameError}
                 onChange={(e) => {
                   setUsername(e.target.value);
+                  setUsernameExists(false);
                   setError("");
                 }}
                 slotProps={{
@@ -158,7 +167,7 @@ const Signup = () => {
               />
               <TextField
                 label="Password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 fullWidth
                 value={password}
                 error={Boolean(passwordError)}
@@ -170,6 +179,34 @@ const Signup = () => {
                 slotProps={{
                   inputLabel: {
                     shrink: true,
+                  },
+                  input: {
+                    endAdornment: (
+                      <InputAdornment
+                        position="end"
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Button
+                          size="small"
+                          sx={{
+                            fontSize: "0.72rem",
+                            color: "primary.main",
+                            p: 0.1,
+                            minWidth: "auto",
+                            border: "none",
+                            "&:focus": { outline: "none" },
+                          }}
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          endIcon={
+                            showPassword ? <VisibilityOff /> : <Visibility />
+                          }
+                        />
+                      </InputAdornment>
+                    ),
                   },
                 }}
                 onBlur={() => setPasswordTouched(true)}

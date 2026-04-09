@@ -13,12 +13,14 @@ interface AttachmentCardProps {
   fileName: string;
   attachmentUrl: string;
   attachmentType: AttachmentType;
+  attachmentSize?: string;
 }
 
 const AttachmentCard = ({
   fileName,
   attachmentUrl,
   attachmentType,
+  attachmentSize,
 }: AttachmentCardProps) => {
   return (
     <Box
@@ -83,20 +85,33 @@ const AttachmentCard = ({
           )}
         </Box>
       )}
-      <Typography
-        sx={{
-          px: 1,
-          py: 0.75,
-          fontSize: "0.75rem",
-          color: "text.primary",
-          fontWeight: 500,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {fileName}
-      </Typography>
+      <Box sx={{ px: 1, py: 0.75 }}>
+        <Typography
+          sx={{
+            fontSize: "0.75rem",
+            color: "text.primary",
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {fileName}
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.2,
+            fontSize: "0.68rem",
+            color: "text.secondary",
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {attachmentSize ?? "-"}
+        </Typography>
+      </Box>
     </Box>
   );
 };
