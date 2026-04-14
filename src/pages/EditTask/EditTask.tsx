@@ -37,6 +37,7 @@ import {
 } from "../../constants/task";
 import {
   MAX_ATTACHMENT_ITEMS,
+  MAX_ATTACHMENT_SIZE,
   MAX_SUBTASK_ITEMS,
   SUBTASK_STATUS_LABELS,
   SUBTASK_STATUS_OPTIONS,
@@ -290,6 +291,12 @@ const EditTask = () => {
     const nonImages = selectedFiles.filter((f) => !f.type.startsWith("image/"));
     if (nonImages.length > 0) {
       setSaveErrorSnackbar("Only image files are supported.");
+      return;
+    }
+
+    const oversized = selectedFiles.filter((f) => f.size > MAX_ATTACHMENT_SIZE);
+    if (oversized.length > 0) {
+      setSaveErrorSnackbar("Each file must be 10 MB or smaller.");
       return;
     }
 

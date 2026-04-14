@@ -34,6 +34,7 @@ import { useAuth } from "../../context/useAuthContext";
 import AlertDialog from "../../components/AlertDialog";
 import {
   MAX_ATTACHMENT_ITEMS,
+  MAX_ATTACHMENT_SIZE,
   MAX_SUBTASK_ITEMS,
 } from "../../constants/taskForm";
 import {
@@ -177,6 +178,12 @@ const AddTask = () => {
     const nonImages = selectedFiles.filter((f) => !f.type.startsWith("image/"));
     if (nonImages.length > 0) {
       setErrorSnackbar("Only image files are supported.");
+      return;
+    }
+
+    const oversized = selectedFiles.filter((f) => f.size > MAX_ATTACHMENT_SIZE);
+    if (oversized.length > 0) {
+      setErrorSnackbar("Each file must be 10 MB or smaller.");
       return;
     }
 

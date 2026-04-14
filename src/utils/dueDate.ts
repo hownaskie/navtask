@@ -44,9 +44,16 @@ const getTomorrowDateKey = (): string => {
   return toDateKey(tomorrow);
 };
 
-const getDateKeyContext = (): { todayKey: string; tomorrowKey: string } => ({
+const getDayAfterTomorrowDateKey = (): string => {
+  const dat = new Date();
+  dat.setDate(dat.getDate() + 2);
+  return toDateKey(dat);
+};
+
+const getDateKeyContext = (): { todayKey: string; tomorrowKey: string; dayAfterTomorrowKey: string } => ({
   todayKey: getTodayDateKey(),
   tomorrowKey: getTomorrowDateKey(),
+  dayAfterTomorrowKey: getDayAfterTomorrowDateKey(),
 });
 
 const DEFAULT_DUE_DATE_META: DueDateMeta = {
@@ -74,7 +81,7 @@ export const getDueDateMeta = (
     return DEFAULT_DUE_DATE_META;
   }
 
-  const { todayKey, tomorrowKey } = getDateKeyContext();
+  const { todayKey, tomorrowKey, dayAfterTomorrowKey } = getDateKeyContext();
 
   if (dueKey < todayKey) {
     return {
@@ -100,12 +107,31 @@ export const getDueDateMeta = (
   }
 
   if (dueKey === tomorrowKey) {
-    if (priority === "CRITICAL" && isIncomplete(status)) {
+    if (isIncomplete(status)) {
       return {
         isDueToday: false,
         isOverdue: false,
         color: "#0591a1",
         label: "Tomorrow",
+        labelColor: "#0591a1",
+      };
+    }
+    return {
+      isDueToday: false,
+      isOverdue: false,
+      color: "success.main",
+      label: null,
+      labelColor: "text.secondary",
+    };
+  }
+
+  if (dueKey === dayAfterTomorrowKey) {
+    if (priority === "CRITICAL" && isIncomplete(status)) {
+      return {
+        isDueToday: false,
+        isOverdue: false,
+        color: "#0591a1",
+        label: null,
         labelColor: "#0591a1",
       };
     }
