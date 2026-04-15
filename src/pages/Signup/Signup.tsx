@@ -244,7 +244,7 @@ const Signup = () => {
                     variant="caption"
                     sx={{ color: "text.secondary" }}
                   >
-                    Cannot contain your username or email address
+                    Cannot contain your name or email address
                   </Typography>
                 </Stack>
 
