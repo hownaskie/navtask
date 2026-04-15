@@ -202,7 +202,7 @@ const Signup = () => {
                           }}
                           onClick={() => setShowPassword((prev) => !prev)}
                           endIcon={
-                            showPassword ? <VisibilityOff /> : <Visibility />
+                            showPassword ? <Visibility /> : <VisibilityOff />
                           }
                         />
                       </InputAdornment>
