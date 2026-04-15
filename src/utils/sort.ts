@@ -19,14 +19,14 @@ const normalizeStatus = (status: string): keyof typeof STATUS_RANK => {
   const key = status.toUpperCase();
   if (key === "NOT_STARTED") return "Not Started";
   if (key === "IN_PROGRESS") return "In Progress";
-  if (key === "COMPLETED") return "Completed";
+  if (key === "COMPLETE" || key === "COMPLETED") return "Complete";
   if (key === "CANCELLED") return "Cancelled";
   if (key === "ALL") return "All";
 
   // Also support already-humanized labels.
   if (status === "Not Started") return "Not Started";
   if (status === "In Progress") return "In Progress";
-  if (status === "Completed") return "Completed";
+  if (status === "Complete") return "Complete";
   if (status === "Cancelled") return "Cancelled";
   return "All";
 };
@@ -44,8 +44,6 @@ export const compareValues = (
   key: SortKey,
 ): number => {
   switch (key) {
-    case "title":
-      return a.title.localeCompare(b.title);
     case "dueDate":
       return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
     case "priority":

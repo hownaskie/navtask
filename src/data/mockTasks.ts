@@ -1,5 +1,5 @@
 type Priority = "Low" | "High" | "Critical";
-type Status   = "All" | "Not Started" | "In Progress" | "Completed" | "Cancelled";
+type Status   = "All" | "Not Started" | "In Progress" | "Complete" | "Cancelled";
 
 export interface Task {
   id: number;
@@ -33,7 +33,7 @@ export const SEED_TASKS: Task[] = [
     title: "Write unit tests for API",
     dueDate: "2025-03-28",
     priority: "High",
-    status: "Completed",
+    status: "Complete",
   },
   {
     id: 4,
@@ -57,7 +57,7 @@ export const SEED_TASKS: Task[] = [
     title: "Deploy staging environment",
     dueDate: "2025-03-25",
     priority: "Critical",
-    status: "Completed",
+    status: "Complete",
   },
   {
     id: 7,

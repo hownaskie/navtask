@@ -9,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { TaskAlt } from "@mui/icons-material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
@@ -17,11 +17,22 @@ import AlertMessage from "../../components/AlertMessage";
 import { useAuth } from "../../context/useAuthContext";
 import { validateLogin } from "../../utils";
 import { authApi } from "../../services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  const [accountCreated] = useState(
+    () => (location.state as { accountCreated?: boolean } | null)?.accountCreated === true
+  );
+
+  useEffect(() => {
+    if (accountCreated) {
+      window.history.replaceState({}, "");
+    }
+  }, [accountCreated]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -95,9 +106,14 @@ const Login = () => {
               </Typography>
             </Stack>
 
-            <Typography variant="h4" gutterBottom mb={4}>
-              Sign In
+            <Typography variant="h4" gutterBottom mb={accountCreated ? 1 : 4}>
+              {accountCreated ? "Account successfully created." : "Sign In"}
             </Typography>
+            {accountCreated && (
+              <Typography variant="h4" mb={4}>
+                Sign in to continue.
+              </Typography>
+            )}
 
             <Stack spacing={2.5}>
               <TextField

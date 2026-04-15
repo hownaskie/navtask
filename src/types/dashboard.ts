@@ -3,7 +3,7 @@ export type Status =
   | "All"
   | "Not Started"
   | "In Progress"
-  | "Completed"
+  | "Complete"
   | "Cancelled";
 export type SortKey = "dueDate" | "priority" | "status";
 export type SortDir = "asc" | "desc";

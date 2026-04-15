@@ -111,14 +111,23 @@ export const getSignupPasswordRuleState = (
 ): SignupPasswordRuleState => {
   const normalizedPassword = password.toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
-  const [localPart = "", domainPart = ""] = normalizedUsername.split("@");
 
   const hasMinLength = password.length >= 8;
   const hasNumberOrSymbol = /[0-9!#()_-]/.test(password);
-  const excludesNameOrEmail =
-    !normalizedPassword.includes(normalizedUsername) &&
-    (!localPart || !normalizedPassword.includes(localPart)) &&
-    (!domainPart || !normalizedPassword.includes(domainPart));
+  const excludesNameOrEmail = (() => {
+    if (!normalizedPassword) return false;
+
+    const parts = normalizedUsername
+      .split(/[@.\s_-]+/)
+      .map((part) => part.trim())
+      .filter((part) => part.length >= 3);
+
+    if (normalizedUsername && normalizedPassword.includes(normalizedUsername)) {
+      return false;
+    }
+
+    return !parts.some((part) => normalizedPassword.includes(part));
+  })();
 
   return {
     hasMinLength,

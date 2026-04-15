@@ -8,10 +8,12 @@ type TaskProgress = {
 type ProgressStatus =
   | "NOT_STARTED"
   | "IN_PROGRESS"
+  | "COMPLETE"
   | "COMPLETED"
   | "CANCELLED"
   | "Not Started"
   | "In Progress"
+  | "Complete"
   | "Completed"
   | "Cancelled";
 
@@ -20,7 +22,7 @@ export const getTaskProgressByStatus = (
   completedSubtasks: number,
   totalSubtasks: number,
 ): TaskProgress => {
-  if (status === "COMPLETED" || status === "Completed") {
+  if (status === "COMPLETE" || status === "COMPLETED" || status === "Complete" || status === "Completed") {
     return { completed: 1, total: 1 };
   }
 
@@ -33,7 +35,10 @@ export const getTaskProgressByStatus = (
 
 export const getTaskProgress = (task: TaskResponse): TaskProgress => {
   const completedSubtasks = task.subtasks.filter(
-    (subtask) => subtask.status === "COMPLETED",
+    (subtask) => {
+      const status = String(subtask.status).toUpperCase();
+      return status === "COMPLETE" || status === "COMPLETED";
+    },
   ).length;
 
   return getTaskProgressByStatus(

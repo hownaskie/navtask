@@ -6,7 +6,7 @@ export const STATUS_OPTIONS: Status[] = [
   "All",
   "Not Started",
   "In Progress",
-  "Completed",
+  "Complete",
   "Cancelled",
 ];
 
@@ -25,13 +25,25 @@ export const priorityValueMap: Record<Priority, TaskPriority> = {
 export const statusLabelMap: Record<TaskStatus, Exclude<Status, "All">> = {
   NOT_STARTED: "Not Started",
   IN_PROGRESS: "In Progress",
-  COMPLETED: "Completed",
+  COMPLETE: "Complete",
   CANCELLED: "Cancelled",
 };
 
 export const statusValueMap: Record<Exclude<Status, "All">, TaskStatus> = {
   "Not Started": "NOT_STARTED",
   "In Progress": "IN_PROGRESS",
-  Completed: "COMPLETED",
+  Complete: "COMPLETE",
   Cancelled: "CANCELLED",
 };
+
+type StatusInput = TaskStatus | "COMPLETED";
+
+export const getStatusLabel = (status: StatusInput): Exclude<Status, "All"> => {
+  if (status === "NOT_STARTED") return "Not Started";
+  if (status === "IN_PROGRESS") return "In Progress";
+  if (status === "COMPLETE" || status === "COMPLETED") return "Complete";
+  return "Cancelled";
+};
+
+export const isCompletedStatus = (status: string): boolean =>
+  status === "COMPLETE" || status === "COMPLETED";

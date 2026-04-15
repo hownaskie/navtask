@@ -29,6 +29,6 @@ export const STATUS_COLORS: Record<Status, { bg: string; color: string; dot: str
       color: "#2563EB",
       dot: "#2563EB",
     },
-    Completed: { bg: "rgba(16,185,129,0.1)", color: "#059669", dot: "#059669" },
+    Complete: { bg: "rgba(16,185,129,0.1)", color: "#059669", dot: "#059669" },
     Cancelled: { bg: "rgba(239,68,68,0.1)", color: "#DC2626", dot: "#DC2626" },
   };

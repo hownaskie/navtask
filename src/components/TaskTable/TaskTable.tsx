@@ -13,6 +13,7 @@ import {
   Box,
   Checkbox,
   Chip,
+  CircularProgress,
   Collapse,
   IconButton,
   Paper,
@@ -28,7 +29,7 @@ import {
   Typography,
 } from "@mui/material";
 import { PRIORITY_COLORS } from "../../constants/colors";
-import { priorityLabelMap, statusLabelMap } from "../../constants/task";
+import { getStatusLabel, isCompletedStatus, priorityLabelMap } from "../../constants/task";
 import type { SortDir, SortKey } from "../../types/dashboard";
 import type { TaskResponse } from "../../interfaces/task";
 import {
@@ -271,7 +272,7 @@ const TaskTable = ({
               ) : (
                 paginated.map((task, idx) => {
                   const isSelected = selectedIds.has(task.id);
-                  const isDone = task.status === "COMPLETED";
+                  const isDone = isCompletedStatus(task.status);
                   const dueDateMeta = getDueDateMeta(task.dueDate, task.priority, task.status);
                   const hasSubtasks = task.subtasks.length > 0;
                   const isExpanded = expandedTaskIds.has(task.id);
@@ -425,12 +426,12 @@ const TaskTable = ({
 
                         <TableCell sx={{ py: 1.5, px: 2 }}>
                           <TaskProgressStatus
-                            status={statusLabelMap[task.status]}
+                            status={getStatusLabel(task.status)}
                             completed={progressCompleted}
                             total={progressTotal}
                             dateLayout="vertical"
                             statusDate={
-                              task.status === "COMPLETED" && task.completedDate
+                              isCompletedStatus(task.status) && task.completedDate
                                 ? formatDate(task.completedDate)
                                 : undefined
                             }
@@ -532,16 +533,39 @@ const TaskTable = ({
                                             borderColor: "divider",
                                           }}
                                         >
-                                          <Typography
-                                            variant="body2"
-                                            sx={{
-                                              fontWeight: 600,
-                                              fontSize: "0.78rem",
-                                              color: subtask.status === "COMPLETED" ? "success.main" : "text.secondary",
-                                            }}
-                                          >
-                                            {subtask.status === "COMPLETED" ? "Done" : "Not Done"}
-                                          </Typography>
+                                          <Stack direction="row" alignItems="center" spacing={0.75}>
+                                            <Box sx={{ position: "relative", display: "inline-flex" }}>
+                                              <CircularProgress
+                                                variant="determinate"
+                                                value={100}
+                                                size={18}
+                                                thickness={4}
+                                                sx={{ color: "#3b82f6" }}
+                                              />
+                                              <CircularProgress
+                                                variant="determinate"
+                                                value={subtask.status === "COMPLETE" ? 100 : 0}
+                                                size={18}
+                                                thickness={22}
+                                                sx={{
+                                                  color: "#3b82f6",
+                                                  position: "absolute",
+                                                  top: 0,
+                                                  left: 0,
+                                                }}
+                                              />
+                                            </Box>
+                                            <Typography
+                                              variant="body2"
+                                              sx={{
+                                                fontWeight: 600,
+                                                fontSize: "0.78rem",
+                                                color: "text.secondary",
+                                              }}
+                                            >
+                                              {subtask.status === "COMPLETE" ? "Done" : "Not Done"}
+                                            </Typography>
+                                          </Stack>
                                         </TableCell>
                                         <TableCell
                                           sx={{

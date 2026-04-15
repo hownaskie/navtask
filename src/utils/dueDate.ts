@@ -64,8 +64,14 @@ const DEFAULT_DUE_DATE_META: DueDateMeta = {
   labelColor: "text.secondary",
 };
 
-const isIncomplete = (status?: TaskStatus): boolean =>
-  status !== "COMPLETED" && status !== "CANCELLED";
+const isIncomplete = (status?: TaskStatus): boolean => {
+  const normalizedStatus = (status ?? "").toUpperCase();
+  return (
+    normalizedStatus !== "COMPLETE" &&
+    normalizedStatus !== "COMPLETED" &&
+    normalizedStatus !== "CANCELLED"
+  );
+};
 
 export const getDueDateMeta = (
   dueDate: string | null,

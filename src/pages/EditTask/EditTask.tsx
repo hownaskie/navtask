@@ -30,9 +30,10 @@ import type { Priority, Status } from "../../types/dashboard";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
 import { useTask } from "../../hooks/useTask";
 import {
+  getStatusLabel,
+  isCompletedStatus,
   priorityLabelMap,
   priorityValueMap,
-  statusLabelMap,
   statusValueMap,
 } from "../../constants/task";
 import {
@@ -129,6 +130,8 @@ const EditTask = () => {
     pendingDeleteSubtaskKey === null
       ? ""
       : subtasks.find((subtask) => subtask.key === pendingDeleteSubtaskKey)?.title.trim() ?? "";
+  const displayedCompletionDate =
+    completionDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
   const isSaveDisabled =
     !isDueDateValid ||
     !details.trim() ||
@@ -153,12 +156,12 @@ const EditTask = () => {
       }
 
       setPriority(priorityLabelMap[data.priority]);
-      setStatus(statusLabelMap[data.status]);
+      setStatus(getStatusLabel(data.status));
       setTitle(data.title);
       setDateCreated(data.createdDate.slice(0, 10));
       setDueDate(data.dueDate ? data.dueDate.slice(0, 10) : "");
       setDetails(data.details ?? "");
-      setCompletionDate(data.status === "COMPLETED" ? data.completedDate : null);
+      setCompletionDate(isCompletedStatus(data.status) ? data.completedDate : null);
       setPendingCompletionConfirmation(false);
       setSubtasks(
         data.subtasks.map((s) => ({
@@ -170,10 +173,10 @@ const EditTask = () => {
       );
       const loadedAllSubtasksCompleted =
         data.subtasks.length > 0 &&
-        data.subtasks.every((subtask) => subtask.status === "COMPLETED");
+        data.subtasks.every((subtask) => isCompletedStatus(subtask.status));
 
-      if (loadedAllSubtasksCompleted && data.status !== "COMPLETED") {
-        setStatus("Completed");
+      if (loadedAllSubtasksCompleted && !isCompletedStatus(data.status)) {
+        setStatus("Complete");
         setCompletionDate(null);
         setPendingCompletionConfirmation(true);
       }
@@ -211,7 +214,7 @@ const EditTask = () => {
 
   // ── Subtask handlers
   const addSubtask = () => {
-    if (status === "Completed") {
+    if (status === "Complete") {
       setSaveErrorSnackbar("You cannot add subtasks when the task status is completed.");
       return;
     }
@@ -243,10 +246,10 @@ const EditTask = () => {
 
     const nextAllSubtasksCompleted =
       nextSubtasks.length > 0 &&
-      nextSubtasks.every((subtask) => subtask.status === "COMPLETED");
+      nextSubtasks.every((subtask) => isCompletedStatus(subtask.status));
 
     if (nextAllSubtasksCompleted) {
-      setStatus("Completed");
+      setStatus("Complete");
       setCompletionDate(null);
       setPendingCompletionConfirmation(true);
     }
@@ -566,7 +569,7 @@ const EditTask = () => {
                     );
                   }
 
-                  if (nextStatus !== "Completed") {
+                  if (nextStatus !== "Complete") {
                     setCompletionDate(null);
                     setPendingCompletionConfirmation(false);
                   } else {
@@ -585,7 +588,7 @@ const EditTask = () => {
                   [
                     "Not Started",
                     "In Progress",
-                    "Completed",
+                    "Complete",
                     "Cancelled",
                   ] as Status[]
                 ).map((s) => (
@@ -608,14 +611,14 @@ const EditTask = () => {
                 ))}
               </TextField>
 
-              {status === "Completed" && completionDate && (
+              {status === "Complete" && (
                 <TextField
                   fullWidth
                   type="date"
                   size="small"
                   label="Date of Completion"
                   disabled
-                  value={completionDate.slice(0, 10)}
+                  value={displayedCompletionDate}
                   slotProps={{
                     htmlInput: {
                       readOnly: true,
@@ -960,7 +963,7 @@ const EditTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
-                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "Completed"}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "Complete"}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",

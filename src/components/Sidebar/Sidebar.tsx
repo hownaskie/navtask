@@ -131,7 +131,7 @@ const SidebarContent = ({ darkMode, onToggleDark, isMobile = false }: ContentPro
               fontWeight: 700,
               fontSize: "1rem",
             }}
-            src={AvatarUrl({ seed: user?.firstName +" "+ user?.lastName || "user" })}
+            src={AvatarUrl({ seed: user?.firstName +" "+ user?.lastName })}
           >
             {user?.firstName?.charAt(0).toUpperCase() || "U"}
           </Avatar>
@@ -142,7 +142,7 @@ const SidebarContent = ({ darkMode, onToggleDark, isMobile = false }: ContentPro
               noWrap
               sx={{ fontFamily: "'Outfit', sans-serif" }}
             >
-              {user?.firstName +" "+ user?.lastName || "User"}
+              {user?.firstName +" "+ user?.lastName === "User" ? "" : user?.firstName}
             </Typography>
           </Box>
         </Stack>

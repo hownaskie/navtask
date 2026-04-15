@@ -16,7 +16,7 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from "@mui/icons-material";
-import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
+import { PRIORITY_COLORS } from "../../constants/colors";
 import StatusChip from "../../components/StatusChip";
 import TaskProgressStatus from "../../components/TaskProgressStatus/TaskProgressStatus";
 import SectionLabel from "../../components/SectionLabel";
@@ -32,8 +32,8 @@ import {
 } from "../../utils";
 import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
 import type { Priority, Status } from "../../types/dashboard";
-import { priorityLabelMap, statusLabelMap } from "../../constants/task";
-import { SUBTASK_STATUS_LABELS } from "../../constants/taskForm";
+import { getStatusLabel, priorityLabelMap } from "../../constants/task";
+import { getSubtaskStatusLabel } from "../../constants/taskForm";
 import {
   buildBreadcrumbTrail,
   type BreadcrumbState,
@@ -43,11 +43,6 @@ type TaskSubtaskView = {
   id: number;
   title: string;
   status: "Not Done" | "Done";
-};
-
-const SUBTASK_STATUS_COLORS = {
-  "Not Done": STATUS_COLORS["Not Started"],
-  Done: STATUS_COLORS.Completed,
 };
 
 type TaskDetails = {
@@ -85,6 +80,7 @@ const ViewTask = () => {
       const taskId = Number(id);
 
       if (!taskId || Number.isNaN(taskId)) {
+        setAttachmentSizes({});
         setError("Invalid task id.");
         setLoading(false);
         return;
@@ -92,10 +88,13 @@ const ViewTask = () => {
 
       const data = await getTaskById(taskId);
       if (!data) {
+        setAttachmentSizes({});
         setError("Task not found.");
         setLoading(false);
         return;
       }
+
+      setAttachmentSizes({});
 
       setTask({
         id: data.id,
@@ -106,7 +105,7 @@ const ViewTask = () => {
         updatedDate: data.updatedDate,
         dueDate: data.dueDate,
         priority: priorityLabelMap[data.priority],
-        status: statusLabelMap[data.status],
+        status: getStatusLabel(data.status),
         attachments: data.attachments,
       });
 
@@ -114,7 +113,7 @@ const ViewTask = () => {
         data.subtasks.map((subtask) => ({
           id: subtask.id,
           title: subtask.name,
-          status: SUBTASK_STATUS_LABELS[subtask.status as "NOT_STARTED" | "COMPLETED"],
+          status: getSubtaskStatusLabel(subtask.status),
         })),
       );
 
@@ -126,7 +125,6 @@ const ViewTask = () => {
 
   useEffect(() => {
     if (!task || task.attachments.length === 0) {
-      setAttachmentSizes({});
       return;
     }
 
@@ -172,11 +170,49 @@ const ViewTask = () => {
   const { completed: progressCompleted, total: progressTotal } =
     getTaskProgressByStatus(task?.status ?? "Not Started", completed, subtasks.length);
   const completionDate =
-    task?.status === "Completed"
+    task?.status === "Complete"
       ? task.completedDate
         ? formatDateDdMmmYyyy(task.completedDate)
         : undefined
       : undefined;
+
+  const renderSubtaskStatus = (status: TaskSubtaskView["status"]) => {
+    const isDone = status === "Done";
+    return (
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Box sx={{ position: "relative", display: "inline-flex" }}>
+          <CircularProgress
+            variant="determinate"
+            value={100}
+            size={18}
+            thickness={4}
+            sx={{ color: "#3b82f6" }}
+          />
+          <CircularProgress
+            variant="determinate"
+            value={isDone ? 100 : 0}
+            size={18}
+            thickness={22}
+            sx={{
+              color: "#3b82f6",
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+          />
+        </Box>
+        <Typography
+          sx={{
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            color: "text.secondary",
+          }}
+        >
+          {status}
+        </Typography>
+      </Stack>
+    );
+  };
 
   if (loading) {
     return (
@@ -269,7 +305,7 @@ const ViewTask = () => {
                         breadcrumbs: [
                           ...currentBreadcrumbs,
                           {
-                            label: "Edit Task",
+                            label: "Edit",
                             href: `/edit/${task.id}`,
                           },
                         ],
@@ -429,7 +465,7 @@ const ViewTask = () => {
                         {taskItem.title}
                       </Typography>
                     </Stack>
-                    <StatusChip value={taskItem.status} map={SUBTASK_STATUS_COLORS} />
+                    {renderSubtaskStatus(taskItem.status)}
                   </Stack>
                 ))}
               </Stack>

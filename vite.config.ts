@@ -15,11 +15,17 @@ export default defineConfig({
         target: 'http://localhost:8080', // your Spring Boot port
         changeOrigin: true,
         rewrite: (path) => path,
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
       },
       '/uploads': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path,
+        configure: (proxy) => {
+          proxy.on('error', () => {});
+        },
       }
     }
   }

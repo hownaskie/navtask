@@ -119,7 +119,7 @@ const AddTask = () => {
 
   // ── Subtask handlers
   const addSubtask = () => {
-    if (status === "COMPLETED") {
+    if (status === "COMPLETE") {
       setErrorSnackbar("You cannot add subtasks when the task status is completed.");
       return;
     }
@@ -373,7 +373,7 @@ const AddTask = () => {
                   [
                     { label: "Not Started", value: "NOT_STARTED" },
                     { label: "In Progress", value: "IN_PROGRESS" },
-                    { label: "Completed", value: "COMPLETED" },
+                    { label: "Complete", value: "COMPLETE" },
                     { label: "Cancelled", value: "CANCELLED" },
                   ] as { label: string; value: string }[]
                 ).map((s) => (
@@ -735,7 +735,7 @@ const AddTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
-                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "COMPLETED"}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "COMPLETE"}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",

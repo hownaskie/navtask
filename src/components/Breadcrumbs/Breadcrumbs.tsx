@@ -18,7 +18,7 @@ interface AppBreadcrumbsProps {
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/add": "New Task",
-  "/edit": "Edit Task",
+  "/edit": "Edit",
   "/view": "View Task",
 };
 
@@ -46,7 +46,6 @@ export const buildBreadcrumbTrail = (pathname: string): BreadcrumbItem[] => {
   }
 
   return [
-    { label: PAGE_TITLES["/dashboard"], href: "/dashboard" },
     {
       label: getBreadcrumbLabel(pathname),
       href: pathname,

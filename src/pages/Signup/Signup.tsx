@@ -20,9 +20,11 @@ import {
   getSignupPasswordRuleState,
 } from "../../utils";
 import { authApi } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const { register } = useAuth();
+  const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,6 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [usernameExists, setUsernameExists] = useState(false);
 
   const {
@@ -50,8 +51,8 @@ const Signup = () => {
         ? (validateUsername(username) ?? "")
         : "";
   const passwordError =
-    passwordTouched && (!hasMinLength || !hasNumberOrSymbol)
-        ? "Password must be at least 8 characters and include a number or symbol"
+    passwordTouched && (!hasMinLength || !hasNumberOrSymbol || !excludesNameOrEmail)
+        ? "Password must be at least 8 characters, include a number or symbol, and not contain your name or email"
       : "";
 
   const canSubmit =
@@ -69,7 +70,6 @@ const Signup = () => {
     setUsernameTouched(true);
     setPasswordTouched(true);
     setError("");
-    setSuccessMessage("");
     if (!canSubmit) {
       return setError("Please satisfy all password requirements");
     }
@@ -77,12 +77,8 @@ const Signup = () => {
     try {
       setLoading(true);
       await register(username.trim(), password);
-      setSuccessMessage("Account created successfully. Please sign in to continue.");
-      setUsername("");
-      setPassword("");
-      setUsernameTouched(false);
-      setPasswordTouched(false);
-      setUsernameExists(false);
+      await authApi.logout().catch(() => {});
+      navigate("/login", { state: { accountCreated: true } });
     } catch (err) {
       const message = err instanceof Error
         ? err.message
@@ -291,7 +287,7 @@ const Signup = () => {
                 </Stack>
               </Stack>
 
-              <AlertMessage error={error} success={successMessage} />
+              <AlertMessage error={error} />
               <Button
                 variant="contained"
                 fullWidth

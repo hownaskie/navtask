@@ -140,7 +140,7 @@ const ProtectedLayout = () => {
               color="text.secondary"
               sx={{ display: { xs: "none", sm: "block" } }}
             >
-              {user?.firstName + " " + user?.lastName}
+              {user?.firstName + " " + user?.lastName === "User" ? "" : user?.firstName}
             </Typography>
           </Stack>
         </Paper>
