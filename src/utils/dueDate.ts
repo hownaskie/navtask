@@ -26,7 +26,7 @@ const toDateKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-type DueDateLabel = "Overdue" | "Today" | "Tomorrow" | null;
+type DueDateLabel = "Overdue" | "Today" | null;
 
 export interface DueDateMeta {
   isDueToday: boolean;
@@ -118,8 +118,8 @@ export const getDueDateMeta = (
         isDueToday: false,
         isOverdue: false,
         color: "#0591a1",
-        label: "Tomorrow",
-        labelColor: "#0591a1",
+        label: null,
+        labelColor: "text.secondary",
       };
     }
     return {
