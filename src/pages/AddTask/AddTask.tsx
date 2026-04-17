@@ -253,7 +253,7 @@ const AddTask = () => {
         emptySubtaskIds.forEach((subtaskId) => next.add(subtaskId));
         return next;
       });
-      setErrorSnackbar("must not be empty");
+      setErrorSnackbar("Subtask Description must not be empty");
       return;
     }
 

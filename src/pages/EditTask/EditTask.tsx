@@ -209,11 +209,6 @@ const EditTask = () => {
 
   // ── Subtask handlers
   const addSubtask = () => {
-    if (status === "Complete") {
-      setSaveErrorSnackbar("You cannot add subtasks when the task status is completed.");
-      return;
-    }
-
     if (subtasks.length >= MAX_SUBTASK_ITEMS) {
       setSaveErrorSnackbar(`You can only add up to ${MAX_SUBTASK_ITEMS} subtasks.`);
       return;
@@ -363,7 +358,7 @@ const EditTask = () => {
         emptySubtaskKeys.forEach((subtaskKey) => next.add(subtaskKey));
         return next;
       });
-      setSaveErrorSnackbar("must not be empty");
+      setSaveErrorSnackbar("Subtask Description must not be empty");
       return false;
     }
 
@@ -965,7 +960,7 @@ const EditTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
-                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "Complete"}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",
