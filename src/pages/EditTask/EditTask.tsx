@@ -38,13 +38,14 @@ import {
   statusValueMap,
 } from "../../constants/task";
 import {
+  DEFAULT_SUBTASK_STATUS,
   MAX_ATTACHMENT_ITEMS,
   MAX_ATTACHMENT_SIZE,
   MAX_SUBTASK_ITEMS,
   SUBTASK_STATUS_LABELS,
   SUBTASK_STATUS_OPTIONS,
 } from "../../constants/taskForm";
-import type { TaskStatus } from "../../types/auth";
+import type { SubtaskStatus } from "../../types/auth";
 import {
   TITLE_MAX_LENGTH,
   DETAILS_MAX_LENGTH,
@@ -59,7 +60,7 @@ interface Subtask {
   key: number;
   id?: number;
   title: string;
-  status: TaskStatus;
+  status: SubtaskStatus;
 }
 
 interface Attachment {
@@ -132,6 +133,8 @@ const EditTask = () => {
   const isDueDatePastCurrentDate = Boolean(dueDate) && !isDueDateAfterToday(dueDate);
   const isDueDateInvalidAfterInput = dueDateTouched && isDueDatePastCurrentDate;
   const isSaveDisabled = updateTaskLoading;
+  const canSelectCompleteStatus =
+    subtasks.length === 0 || subtasks.every((subtask) => isCompletedStatus(subtask.status));
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -214,10 +217,24 @@ const EditTask = () => {
       return;
     }
 
-    setSubtasks((prev) => [
-      ...prev,
-      { key: Date.now(), title: "", status: "NOT_STARTED" },
-    ]);
+    setSubtasks((prev) => {
+      const nextSubtasks = [
+        ...prev,
+        { key: Date.now(), title: "", status: DEFAULT_SUBTASK_STATUS },
+      ];
+
+      if (status === "Complete") {
+        setStatus(
+          nextSubtasks.some((subtask) => isCompletedStatus(subtask.status))
+            ? "In Progress"
+            : "Not Started",
+        );
+        setCompletionDate(null);
+        setPendingCompletionConfirmation(false);
+      }
+
+      return nextSubtasks;
+    });
   };
 
   const updateSubtask = (key: number, value: string) => {
@@ -227,7 +244,7 @@ const EditTask = () => {
     );
   };
 
-  const updateSubtaskStatus = (key: number, nextSubtaskStatus: TaskStatus) => {
+  const updateSubtaskStatus = (key: number, nextSubtaskStatus: SubtaskStatus) => {
     const nextSubtasks = subtasks.map((subtask) =>
       subtask.key === key ? { ...subtask, status: nextSubtaskStatus } : subtask,
     );
@@ -242,11 +259,37 @@ const EditTask = () => {
       setStatus("Complete");
       setCompletionDate(null);
       setPendingCompletionConfirmation(true);
+    } else if (status === "Complete") {
+      setStatus(
+        nextSubtasks.some((subtask) => isCompletedStatus(subtask.status))
+          ? "In Progress"
+          : "Not Started",
+      );
+      setCompletionDate(null);
+      setPendingCompletionConfirmation(false);
     }
   };
 
   const removeSubtask = (key: number) => {
-    setSubtasks((prev) => prev.filter((s) => s.key !== key));
+    setSubtasks((prev) => {
+      const nextSubtasks = prev.filter((s) => s.key !== key);
+
+      if (
+        status === "Complete" &&
+        nextSubtasks.length > 0 &&
+        !nextSubtasks.every((subtask) => isCompletedStatus(subtask.status))
+      ) {
+        setStatus(
+          nextSubtasks.some((subtask) => isCompletedStatus(subtask.status))
+            ? "In Progress"
+            : "Not Started",
+        );
+        setCompletionDate(null);
+        setPendingCompletionConfirmation(false);
+      }
+
+      return nextSubtasks;
+    });
     setTouchedSubtaskKeys((prev) => {
       const next = new Set(prev);
       next.delete(key);
@@ -332,7 +375,13 @@ const EditTask = () => {
       return false;
     }
 
-    if (dueDateTouched && dueDate && !isDueDateAfterToday(dueDate)) {
+    if (!dueDate) {
+      setDueDateTouched(true);
+      setSaveErrorSnackbar("Due date must be not empty.");
+      return false;
+    }
+
+    if (!isDueDateAfterToday(dueDate)) {
       setSaveErrorSnackbar("Must be later than Date Created");
       return false;
     }
@@ -431,8 +480,15 @@ const EditTask = () => {
   const handleMarkAsComplete = async () => {
     const nowIso = new Date().toISOString();
     setCompletionDate(nowIso);
+    const success = await handleSave("list");
+
+    if (!success) {
+      setCompletionDate(null);
+      setPendingCompletionConfirmation(true);
+      return;
+    }
+
     setPendingCompletionConfirmation(false);
-    await handleSave("list");
   };
 
   const handleSuccessSnackbarClose = () => {
@@ -583,7 +639,11 @@ const EditTask = () => {
                     "Cancelled",
                   ] as Status[]
                 ).map((s) => (
-                  <MenuItem key={s} value={s}>
+                  <MenuItem
+                    key={s}
+                    value={s}
+                    disabled={s === "Complete" && !canSelectCompleteStatus}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box
                         sx={{
@@ -1038,7 +1098,7 @@ const EditTask = () => {
                         size="small"
                         value={s.status}
                         onChange={(e) =>
-                          updateSubtaskStatus(s.key, e.target.value as TaskStatus)
+                          updateSubtaskStatus(s.key, e.target.value as SubtaskStatus)
                         }
                         sx={{ ...inputSx, minWidth: 170 }}
                       >

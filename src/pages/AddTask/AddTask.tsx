@@ -27,15 +27,19 @@ import {
   Typography,
 } from "@mui/material";
 import { PRIORITY_COLORS, STATUS_COLORS } from "../../constants/colors";
+import { isCompletedStatus } from "../../constants/task";
 import { useTask } from "../../hooks/useTask";
 import type { Priority, Status } from "../../types/dashboard";
-import type { TaskStatus, TaskPriority } from "../../types/auth";
+import type { SubtaskStatus, TaskStatus, TaskPriority } from "../../types/auth";
 import { useAuth } from "../../context/useAuthContext";
 import AlertDialog from "../../components/AlertDialog";
 import {
+  DEFAULT_SUBTASK_STATUS,
   MAX_ATTACHMENT_ITEMS,
   MAX_ATTACHMENT_SIZE,
   MAX_SUBTASK_ITEMS,
+  SUBTASK_STATUS_LABELS,
+  SUBTASK_STATUS_OPTIONS,
 } from "../../constants/taskForm";
 import {
   validateAddTaskForm,
@@ -47,6 +51,7 @@ import {
 interface Subtask {
   id: number;
   title: string;
+  status: SubtaskStatus;
 }
 
 interface Attachment {
@@ -80,9 +85,9 @@ const AddTask = () => {
   const { createTask, createTaskLoading } = useTask();
 
   // ── Form state
-  const [priority, setPriority] = useState<TaskPriority | "">("");
-  const [status, setStatus] = useState<TaskStatus | "">("");
-  const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState<TaskPriority | "">("HIGH");
+  const [status, setStatus] = useState<TaskStatus | "">("NOT_STARTED");
+  const [title, setTitle] = useState("Task 01");
   const [dateCreated] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState("");
   const [details, setDetails] = useState("");
@@ -105,10 +110,13 @@ const AddTask = () => {
       ? ""
       : subtasks.find((subtask) => subtask.id === pendingDeleteSubtaskId)?.title.trim() ?? "";
   const isSaveDisabled = createTaskLoading;
+  const isStatusCompleted = isCompletedStatus(status);
+  const canSelectCompleteStatus =
+    subtasks.length === 0 || subtasks.every((subtask) => isCompletedStatus(subtask.status));
 
   // ── Subtask handlers
   const addSubtask = () => {
-    if (status === "COMPLETE") {
+    if (isStatusCompleted) {
       setErrorSnackbar("You cannot add subtasks when the task status is completed.");
       return;
     }
@@ -118,7 +126,7 @@ const AddTask = () => {
       return;
     }
 
-    setSubtasks((prev) => [...prev, { id: Date.now(), title: "" }]);
+    setSubtasks((prev) => [...prev, { id: Date.now(), title: "", status: DEFAULT_SUBTASK_STATUS }]);
   };
 
   const updateSubtask = (id: number, value: string) => {
@@ -126,6 +134,26 @@ const AddTask = () => {
     setSubtasks((prev) =>
       prev.map((s) => (s.id === id ? { ...s, title: value } : s)),
     );
+  };
+
+  const updateSubtaskStatus = (id: number, nextSubtaskStatus: SubtaskStatus) => {
+    const nextSubtasks = subtasks.map((subtask) =>
+      subtask.id === id ? { ...subtask, status: nextSubtaskStatus } : subtask,
+    );
+
+    setSubtasks(nextSubtasks);
+
+    const nextAllSubtasksCompleted =
+      nextSubtasks.length > 0 &&
+      nextSubtasks.every((subtask) => isCompletedStatus(subtask.status));
+
+    if (isStatusCompleted && !nextAllSubtasksCompleted) {
+      setStatus(
+        nextSubtasks.some((subtask) => isCompletedStatus(subtask.status))
+          ? "IN_PROGRESS"
+          : "NOT_STARTED",
+      );
+    }
   };
 
   const removeSubtask = (id: number) => {
@@ -227,7 +255,12 @@ const AddTask = () => {
       return;
     }
 
-    if (dueDate && !isDueDateAfterToday(dueDate)) {
+    if (!dueDate) {
+      setErrorSnackbar("Due date must not be empty.");
+      return;
+    }
+
+    if (!isDueDateAfterToday(dueDate)) {
       setErrorSnackbar("Must be later than Date Created");
       return;
     }
@@ -268,7 +301,7 @@ const AddTask = () => {
           dueDate: dueDate || undefined,
           subtasks: normalizedSubtasks.map((subtask) => ({
             name: subtask.title,
-            status: "NOT_STARTED",
+            status: subtask.status,
           })),
           userId: user?.id,
         }, imageFiles.length > 0 ? imageFiles : undefined);
@@ -372,7 +405,11 @@ const AddTask = () => {
                     { label: "Cancelled", value: "CANCELLED" },
                   ] as { label: string; value: string }[]
                 ).map((s) => (
-                  <MenuItem key={s.label} value={s.value}>
+                  <MenuItem
+                    key={s.label}
+                    value={s.value}
+                    disabled={s.value === "COMPLETE" && !canSelectCompleteStatus}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box
                         sx={{
@@ -729,7 +766,7 @@ const AddTask = () => {
                   size="small"
                   startIcon={<Add fontSize="small" />}
                   onClick={addSubtask}
-                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || status === "COMPLETE"}
+                  disabled={subtasks.length >= MAX_SUBTASK_ITEMS || isStatusCompleted}
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",
@@ -802,6 +839,21 @@ const AddTask = () => {
                           },
                         }}
                       />
+                      <TextField
+                        select
+                        size="small"
+                        value={s.status}
+                        onChange={(e) =>
+                          updateSubtaskStatus(s.id, e.target.value as SubtaskStatus)
+                        }
+                        sx={{ ...inputSx, minWidth: 170 }}
+                      >
+                        {SUBTASK_STATUS_OPTIONS.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {SUBTASK_STATUS_LABELS[option]}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                       <Tooltip title="Remove subtask">
                         <IconButton
                           size="small"
@@ -893,15 +945,8 @@ const AddTask = () => {
       </Snackbar>
       <AlertDialog
         open={pendingDeleteSubtaskId !== null}
-        content={
-          <>
-            <span>Delete this Subtask?</span>
-            <br />
-            <span style={{ textDecoration: "underline" }}>
-              {pendingDeleteSubtaskDescription || "This subtask has no description."}
-            </span>
-          </>
-        }
+        title="Delete this Subtask?"
+        content={pendingDeleteSubtaskDescription || "This subtask has no description."}
         variant="warning"
         leftButtonText="Delete"
         rightButtonText="Cancel"
