@@ -13,13 +13,13 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import BrandPanel from "../../components/BrandPanel";
 import AuthFooter from "../../components/AuthFooter";
 import AlertMessage from "../../components/AlertMessage";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "../../context/useAuthContext";
 import {
   validateUsername,
   getSignupPasswordRuleState,
 } from "../../utils";
-import { authApi } from "../../services/api";
+import { authApi, userApi } from "../../services/api";
 import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
@@ -31,9 +31,12 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [usernameExists, setUsernameExists] = useState(false);
+  const [lastCheckedUsername, setLastCheckedUsername] = useState("");
+  const usernameCheckRequestIdRef = useRef(0);
 
   const {
     hasMinLength,
@@ -42,14 +45,19 @@ const Signup = () => {
     isStrongPassword,
   } = getSignupPasswordRuleState(username, password);
 
+  const usernameValidationError = validateUsername(username);
   const usernameError =
     usernameTouched && !username.trim()
       ? "Username is required"
       : usernameTouched && usernameExists
         ? "Username already exists"
       : usernameTouched
-        ? (validateUsername(username) ?? "")
+        ? (usernameValidationError ?? "")
         : "";
+  const usernameHelperText =
+    checkingUsername && usernameTouched && !usernameError
+      ? "Checking username availability..."
+      : usernameError;
   const passwordError =
     passwordTouched && (!hasMinLength || !hasNumberOrSymbol || !excludesNameOrEmail)
         ? "Password must be at least 8 characters, include a number or symbol, and not contain your name or email"
@@ -58,10 +66,54 @@ const Signup = () => {
   const canSubmit =
     Boolean(username.trim()) &&
     !usernameExists &&
-    !validateUsername(username) &&
+    !checkingUsername &&
+    !usernameValidationError &&
     hasMinLength &&
     hasNumberOrSymbol &&
     excludesNameOrEmail;
+
+  const checkUsernameUniqueness = async (value: string): Promise<boolean> => {
+    const normalizedUsername = value.trim().toLowerCase();
+    const validationError = validateUsername(value);
+
+    if (!normalizedUsername || validationError) {
+      setUsernameExists(false);
+      setLastCheckedUsername("");
+      return false;
+    }
+
+    const requestId = usernameCheckRequestIdRef.current + 1;
+    usernameCheckRequestIdRef.current = requestId;
+    setCheckingUsername(true);
+
+    try {
+      const response = await userApi.checkUsernameExists(normalizedUsername);
+      const exists = Boolean(response.data.data.exists);
+
+      if (usernameCheckRequestIdRef.current === requestId) {
+        setUsernameExists(exists);
+        setLastCheckedUsername(normalizedUsername);
+      }
+
+      return exists;
+    } catch {
+      if (usernameCheckRequestIdRef.current === requestId) {
+        setUsernameExists(false);
+        setLastCheckedUsername("");
+      }
+
+      return false;
+    } finally {
+      if (usernameCheckRequestIdRef.current === requestId) {
+        setCheckingUsername(false);
+      }
+    }
+  };
+
+  const handleUsernameBlur = async () => {
+    setUsernameTouched(true);
+    await checkUsernameUniqueness(username);
+  };
 
   const handleGoogle = () => authApi.googleLogin();
   const handleFacebook = () => authApi.facebookLogin();
@@ -70,6 +122,26 @@ const Signup = () => {
     setUsernameTouched(true);
     setPasswordTouched(true);
     setError("");
+
+    const normalizedUsername = username.trim().toLowerCase();
+    const needsUsernameCheck =
+      Boolean(normalizedUsername) &&
+      !validateUsername(username) &&
+      normalizedUsername !== lastCheckedUsername;
+
+    if (needsUsernameCheck) {
+      const exists = await checkUsernameUniqueness(username);
+      if (exists) {
+        setError("Username already exists");
+        return;
+      }
+    }
+
+    if (usernameExists) {
+      setError("Username already exists");
+      return;
+    }
+
     if (!canSubmit) {
       return setError("Please satisfy all password requirements");
     }
@@ -148,10 +220,11 @@ const Signup = () => {
                 fullWidth
                 value={username}
                 error={Boolean(usernameError)}
-                helperText={usernameError}
+                helperText={usernameHelperText}
                 onChange={(e) => {
                   setUsername(e.target.value);
                   setUsernameExists(false);
+                  setLastCheckedUsername("");
                   setError("");
                 }}
                 slotProps={{
@@ -159,7 +232,9 @@ const Signup = () => {
                     shrink: true,
                   },
                 }}
-                onBlur={() => setUsernameTouched(true)}
+                onBlur={() => {
+                  void handleUsernameBlur();
+                }}
               />
               <TextField
                 label="Password"

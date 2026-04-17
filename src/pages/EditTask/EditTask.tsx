@@ -15,6 +15,7 @@ import {
   Container,
   Divider,
   FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -49,7 +50,7 @@ import {
   DETAILS_MAX_LENGTH,
   formatFileSize,
   resolveAttachmentSize,
-  getNextDateString,
+  isDueDateAfterToday,
 } from "../../utils";
 import AlertDialog from "../../components/AlertDialog";
 import { buildBreadcrumbTrail } from "../../components/Breadcrumbs";
@@ -110,6 +111,8 @@ const EditTask = () => {
   const [completionDate, setCompletionDate] = useState<string | null>(null);
   const [pendingCompletionConfirmation, setPendingCompletionConfirmation] = useState(false);
   const [pendingDeleteSubtaskKey, setPendingDeleteSubtaskKey] = useState<number | null>(null);
+  const [detailsTouched, setDetailsTouched] = useState(false);
+  const [dueDateTouched, setDueDateTouched] = useState(false);
   const [touchedSubtaskKeys, setTouchedSubtaskKeys] = useState<Set<number>>(new Set());
   const [subtaskValidationTriggered, setSubtaskValidationTriggered] = useState(false);
   const [initialSubtaskIds, setInitialSubtaskIds] = useState<Set<number>>(
@@ -118,13 +121,6 @@ const EditTask = () => {
   const [initialAttachmentIds, setInitialAttachmentIds] = useState<Set<number>>(
     new Set(),
   );
-  const minDueDate = getNextDateString(dateCreated);
-  const isDueDateValid = Boolean(dueDate) && dueDate > dateCreated;
-  const hasInvalidTouchedSubtask = subtasks.some(
-    (subtask) =>
-      (subtaskValidationTriggered || touchedSubtaskKeys.has(subtask.key)) &&
-      !subtask.title.trim(),
-  );
   const canMarkAsComplete = pendingCompletionConfirmation;
   const pendingDeleteSubtaskDescription =
     pendingDeleteSubtaskKey === null
@@ -132,11 +128,10 @@ const EditTask = () => {
       : subtasks.find((subtask) => subtask.key === pendingDeleteSubtaskKey)?.title.trim() ?? "";
   const displayedCompletionDate =
     completionDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-  const isSaveDisabled =
-    !isDueDateValid ||
-    !details.trim() ||
-    hasInvalidTouchedSubtask ||
-    updateTaskLoading;
+  const isDetailsEmptyAfterInput = detailsTouched && !details.trim();
+  const isDueDatePastCurrentDate = Boolean(dueDate) && !isDueDateAfterToday(dueDate);
+  const isDueDateInvalidAfterInput = dueDateTouched && isDueDatePastCurrentDate;
+  const isSaveDisabled = updateTaskLoading;
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -337,12 +332,13 @@ const EditTask = () => {
     }
 
     if (!details.trim()) {
-      setSaveErrorSnackbar("Due date and description are required.");
+      setDetailsTouched(true);
+      setSaveErrorSnackbar("Description is required.");
       return false;
     }
 
-    if (!isDueDateValid) {
-      setSaveErrorSnackbar("must be later than Date Created");
+    if (dueDateTouched && dueDate && !isDueDateAfterToday(dueDate)) {
+      setSaveErrorSnackbar("Must be later than Date Created");
       return false;
     }
 
@@ -367,7 +363,7 @@ const EditTask = () => {
         emptySubtaskKeys.forEach((subtaskKey) => next.add(subtaskKey));
         return next;
       });
-      setSaveErrorSnackbar("Subtask title cannot be empty.");
+      setSaveErrorSnackbar("must not be empty");
       return false;
     }
 
@@ -704,11 +700,13 @@ const EditTask = () => {
                   size="small"
                   label="Due Date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    setDueDateTouched(true);
+                    setDueDate(e.target.value);
+                  }}
+                  error={isDueDateInvalidAfterInput}
+                  helperText={isDueDateInvalidAfterInput ? "Must be later than Date Created" : " "}
                   slotProps={{
-                    htmlInput: {
-                      min: minDueDate,
-                    },
                     input: {
                       startAdornment: (
                         <CalendarToday
@@ -733,7 +731,7 @@ const EditTask = () => {
 
             {/* ── Details ── */}
             <Box>
-              <FormControl fullWidth variant="outlined">
+              <FormControl fullWidth variant="outlined" error={isDetailsEmptyAfterInput}>
                 <InputLabel shrink>Details</InputLabel>
                 <OutlinedInput
                   multiline
@@ -742,11 +740,15 @@ const EditTask = () => {
                   notched
                   value={details}
                   inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
-                  onChange={(e) =>
-                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH))
-                  }
+                  onChange={(e) => {
+                    setDetailsTouched(true);
+                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH));
+                  }}
                 />
               </FormControl>
+              {isDetailsEmptyAfterInput && (
+                <FormHelperText error>must not be empty</FormHelperText>
+              )}
               <Typography
                 variant="caption"
                 sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
@@ -1025,7 +1027,7 @@ const EditTask = () => {
                         error={isSubtaskTitleInvalid(s.key, s.title)}
                         helperText={
                           isSubtaskTitleInvalid(s.key, s.title)
-                            ? "Subtask title is required"
+                            ? "must not be empty"
                             : " "
                         }
                         sx={{

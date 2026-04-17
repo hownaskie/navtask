@@ -41,7 +41,6 @@ import {
   validateAddTaskForm,
   TITLE_MAX_LENGTH,
   DETAILS_MAX_LENGTH,
-  getMinDueDateString,
   isDueDateAfterToday,
 } from "../../utils";
 
@@ -93,29 +92,19 @@ const AddTask = () => {
   const [errorSnackbar, setErrorSnackbar] = useState<string | null>(null);
   const [pendingDeleteSubtaskId, setPendingDeleteSubtaskId] = useState<number | null>(null);
   const [titleHadValue, setTitleHadValue] = useState(false);
+  const [detailsTouched, setDetailsTouched] = useState(false);
   const [dueDateHadValue, setDueDateHadValue] = useState(false);
   const [touchedSubtaskIds, setTouchedSubtaskIds] = useState<Set<number>>(new Set());
   const [subtaskValidationTriggered, setSubtaskValidationTriggered] = useState(false);
-  const minDueDate = getMinDueDateString();
   const isTitleEmptyAfterInput = titleHadValue && !title.trim();
-  const isDueDateEmptyAfterInput = dueDateHadValue && !dueDate;
+  const isDetailsEmptyAfterInput = detailsTouched && !details.trim();
+  const isDueDatePastCurrentDate = Boolean(dueDate) && !isDueDateAfterToday(dueDate);
+  const isDueDateInvalidAfterInput = dueDateHadValue && isDueDatePastCurrentDate;
   const pendingDeleteSubtaskDescription =
     pendingDeleteSubtaskId === null
       ? ""
       : subtasks.find((subtask) => subtask.id === pendingDeleteSubtaskId)?.title.trim() ?? "";
-  const hasInvalidTouchedSubtask = subtasks.some(
-    (subtask) =>
-      (subtaskValidationTriggered || touchedSubtaskIds.has(subtask.id)) &&
-      !subtask.title.trim(),
-  );
-  const isSaveDisabled =
-    !priority ||
-    !status ||
-    !title.trim() ||
-    !isDueDateAfterToday(dueDate) ||
-    !details.trim() ||
-    hasInvalidTouchedSubtask ||
-    createTaskLoading;
+  const isSaveDisabled = createTaskLoading;
 
   // ── Subtask handlers
   const addSubtask = () => {
@@ -215,6 +204,17 @@ const AddTask = () => {
     const trimmedTitle = title.trim();
     const trimmedDetails = details.trim();
 
+    if (!priority || !status || !trimmedTitle) {
+      setErrorSnackbar("Priority, status, and title are required.");
+      return;
+    }
+
+    if (!trimmedDetails) {
+      setDetailsTouched(true);
+      setErrorSnackbar("Description is required.");
+      return;
+    }
+
     const validationError = validateAddTaskForm({
       title,
       details,
@@ -227,13 +227,8 @@ const AddTask = () => {
       return;
     }
 
-    if (!trimmedDetails) {
-      setErrorSnackbar("Priority, status, title, due date, and description are required.");
-      return;
-    }
-
-    if (!isDueDateAfterToday(dueDate)) {
-      setErrorSnackbar("must be later than Date Created");
+    if (dueDate && !isDueDateAfterToday(dueDate)) {
+      setErrorSnackbar("Must be later than Date Created");
       return;
     }
 
@@ -258,7 +253,7 @@ const AddTask = () => {
         emptySubtaskIds.forEach((subtaskId) => next.add(subtaskId));
         return next;
       });
-      setErrorSnackbar("Subtask title cannot be empty.");
+      setErrorSnackbar("must not be empty");
       return;
     }
 
@@ -470,17 +465,12 @@ const AddTask = () => {
                   value={dueDate}
                   onChange={(e) => {
                     const nextValue = e.target.value;
-                    if (nextValue) {
-                      setDueDateHadValue(true);
-                    }
+                    setDueDateHadValue(true);
                     setDueDate(nextValue);
                   }}
-                  error={isDueDateEmptyAfterInput}
-                  helperText={isDueDateEmptyAfterInput ? "must be later than Date Created" : " "}
+                  error={isDueDateInvalidAfterInput}
+                  helperText={isDueDateInvalidAfterInput ? "Must be later than Date Created" : " "}
                   slotProps={{
-                    htmlInput: {
-                      min: minDueDate,
-                    },
                     input: {
                       startAdornment: (
                         <CalendarToday
@@ -505,7 +495,7 @@ const AddTask = () => {
 
             {/* ── Details ── */}
             <Box>
-              <FormControl fullWidth variant="outlined">
+              <FormControl fullWidth variant="outlined" error={isDetailsEmptyAfterInput}>
                 <InputLabel shrink>Details</InputLabel>
                 <OutlinedInput
                   multiline
@@ -514,11 +504,15 @@ const AddTask = () => {
                   notched
                   value={details}
                   inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
-                  onChange={(e) =>
-                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH))
-                  }
+                  onChange={(e) => {
+                    setDetailsTouched(true);
+                    setDetails(e.target.value.slice(0, DETAILS_MAX_LENGTH));
+                  }}
                 />
               </FormControl>
+              {isDetailsEmptyAfterInput && (
+                <FormHelperText error>must not be empty</FormHelperText>
+              )}
               <Typography
                 variant="caption"
                 sx={{ mt: 0.5, display: "block", color: "text.secondary" }}
@@ -797,7 +791,7 @@ const AddTask = () => {
                         error={isSubtaskTitleInvalid(s.id, s.title)}
                         helperText={
                           isSubtaskTitleInvalid(s.id, s.title)
-                            ? "Subtask title is required"
+                            ? "must not be empty"
                             : " "
                         }
                         sx={{

@@ -255,7 +255,13 @@ const request = async <T>(
       const responseData = await parseResponseData(response);
 
       if (!response.ok) {
-        if (response.status === 401 && shouldAttemptAuthRefresh(path, skipAuthRefresh)) {
+        const hasAccessToken = Boolean(getToken());
+
+        if (
+          response.status === 401 &&
+          hasAccessToken &&
+          shouldAttemptAuthRefresh(path, skipAuthRefresh)
+        ) {
           const refreshedToken = await refreshAccessToken();
           if (refreshedToken) {
             return request<T>(path, {
@@ -368,6 +374,10 @@ export const authApi = {
 
 export const userApi = {
   getAll: () => api.get<ApiResponse<User[]>>("/users"),
+  checkUsernameExists: (username: string) =>
+    api.get<ApiResponse<{ exists: boolean }>>(
+      `/users/exists?username=${encodeURIComponent(username)}`,
+    ),
 };
 
 export const taskApi = {
