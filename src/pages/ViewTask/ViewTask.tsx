@@ -30,7 +30,10 @@ import {
   getAttachmentUrl,
   resolveAttachmentSize,
 } from "../../utils";
-import { formatDate, formatDateDdMmmYyyy } from "../../utils/dateFormat";
+import {
+  formatDateDdMmmYyyy,
+  formatDateMmmDdYyyy,
+} from "../../utils/dateFormat";
 import type { Priority, Status } from "../../types/dashboard";
 import { getStatusLabel, priorityLabelMap } from "../../constants/task";
 import { getSubtaskStatusLabel } from "../../constants/taskForm";
@@ -298,7 +301,6 @@ const ViewTask = () => {
               <Tooltip title="Edit">
                 <IconButton
                   size="small"
-                  disabled={task.status === "Cancelled"}
                   onClick={() =>
                     navigate(`/edit/${task.id}`, {
                       state: {
@@ -342,7 +344,7 @@ const ViewTask = () => {
                 <Typography
                   sx={{ fontSize: "0.875rem", color: "text.secondary" }}
                 >
-                  {formatDate(task.createdDate)}
+                  {formatDateMmmDdYyyy(task.createdDate)}
                 </Typography>
               </Stack>
             </Box>
@@ -357,7 +359,7 @@ const ViewTask = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {task.dueDate ? formatDate(task.dueDate) : "No due date"}
+                  {task.dueDate ? formatDateMmmDdYyyy(task.dueDate) : "No due date"}
                 </Typography>
               </Stack>
             </Box>

@@ -290,7 +290,6 @@ const TaskTable = ({
                             : isDone
                               ? "action.hover"
                               : "background.paper",
-                          opacity: isDone && !isSelected ? 0.65 : 1,
                           transition: "all 0.15s",
                           borderTop: idx === 0 ? "none" : "1px solid",
                           borderColor: "divider",
@@ -442,7 +441,6 @@ const TaskTable = ({
                           <IconButton
                             className="row-edit"
                             size="small"
-                            disabled={task.status === "CANCELLED"}
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditTask(task.id);
