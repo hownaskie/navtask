@@ -358,7 +358,7 @@ const EditTask = () => {
         emptySubtaskKeys.forEach((subtaskKey) => next.add(subtaskKey));
         return next;
       });
-      setSaveErrorSnackbar("Subtask Description must not be empty");
+      setSaveErrorSnackbar("Subtask description must not be empty");
       return false;
     }
 
