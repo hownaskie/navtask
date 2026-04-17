@@ -479,9 +479,22 @@ const ViewTask = () => {
       <AlertDialog
         open={openDeleteDialog}
         variant="warning"
+        title="Delete this Subtask?"
         leftButtonText={deleteTaskLoading ? "Deleting..." : "Delete"}
         rightButtonText="Cancel"
-        content="Are you sure you want to delete this task? This action cannot be undone."
+        content={
+          <Typography
+            sx={{
+              fontSize: "1.3rem",
+              fontWeight: 600,
+              color: "text.secondary",
+              mb: 5,
+              textDecoration: "underline",
+            }}
+          >
+            {task.title}
+          </Typography>
+        }
         onConfirm={handleConfirmDelete}
         onClose={() => {
           if (!deleteTaskLoading) {

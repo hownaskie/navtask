@@ -893,8 +893,15 @@ const AddTask = () => {
       </Snackbar>
       <AlertDialog
         open={pendingDeleteSubtaskId !== null}
-        title="Delete this Subtask?"
-        content={pendingDeleteSubtaskDescription || "This subtask has no description."}
+        content={
+          <>
+            <span>Delete this Subtask?</span>
+            <br />
+            <span style={{ textDecoration: "underline" }}>
+              {pendingDeleteSubtaskDescription || "This subtask has no description."}
+            </span>
+          </>
+        }
         variant="warning"
         leftButtonText="Delete"
         rightButtonText="Cancel"
